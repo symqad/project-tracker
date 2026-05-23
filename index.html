@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Master Project Tracker</title>
-  
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -43,123 +42,77 @@
       '': 'bg-slate-100 text-slate-500'
     };
 
-    const IconPlus = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>;
-    const IconTrash = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>;
-    const IconCheck = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M9 12l2 2 4-4"/></svg>;
-    const IconSquare = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>;
-    const IconArchive = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="8" x="2" y="3" rx="1"/><path d="M4 11v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9"/><path d="m9.5 17 5-5"/><path d="m9.5 12 5 5"/></svg>;
-    const IconSettings = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
-    const IconSparkles = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>;
-    const IconLoader = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin text-purple-600"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
-    const IconArrowUp = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>;
-    const IconArrowDown = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>;
-
-    const AutoResizeTextarea = ({ value, onSave, onKeyDown, autoFocus, className, minRows = 1 }) => {
+    const AutoResizeTextarea = ({ value, onSave, className, minRows = 1 }) => {
       const [localValue, setLocalValue] = useState(value);
       useEffect(() => setLocalValue(value), [value]);
-      const resize = (target) => { target.style.height = 'auto'; target.style.height = target.scrollHeight + 'px'; };
-      return <textarea value={localValue} onChange={(e) => { setLocalValue(e.target.value); resize(e.target); }} onBlur={(e) => { if (localValue !== value) onSave(localValue); }} onKeyDown={(e) => { if (onKeyDown) onKeyDown(e, localValue); }} onFocus={(e) => resize(e.target)} autoFocus={autoFocus} className={className} rows={minRows} />;
+      const resize = (t) => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
+      return <textarea value={localValue} onChange={(e) => { setLocalValue(e.target.value); resize(e.target); }} onBlur={(e) => { if (localValue !== value) onSave(localValue); }} onFocus={(e) => resize(e.target)} className={className} rows={minRows} />;
     };
 
     function App() {
       const [user, setUser] = useState(null);
       const [projects, setProjects] = useState([]);
       const [loading, setLoading] = useState(true);
-      const [showSettings, setShowSettings] = useState(false);
-      const [aiKey, setAiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-      const [generatingIds, setGeneratingIds] = useState({});
 
       useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => { setUser(currentUser); if (!currentUser) setLoading(false); });
+        const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
         return () => unsubscribe();
       }, []);
 
       useEffect(() => {
         if (!user) return;
-        const projectsRef = collection(db, 'users', user.uid, 'projects');
-        const unsubscribe = onSnapshot(projectsRef, (snapshot) => {
-          const loadedProjects = snapshot.docs.map(doc => doc.data());
-          loadedProjects.sort((a, b) => b.id - a.id);
-          setProjects(loadedProjects);
-          setLoading(false);
+        const unsubscribe = onSnapshot(collection(db, 'users', user.uid, 'projects'), (snap) => {
+          setProjects(snap.docs.map(d => d.data()).sort((a,b) => b.id - a.id));
         });
         return () => unsubscribe();
       }, [user]);
 
-      const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Login failed:", error); } };
-      const saveAiKey = () => { localStorage.setItem('gemini_api_key', aiKey); setShowSettings(false); };
-
-      const generateStatus = async (project) => {
-        if (!aiKey) { alert("Please click the Settings gear icon and add your free Gemini API key first."); return; }
-        setGeneratingIds(prev => ({ ...prev, [project.id]: true }));
-        const prompt = `You are a ruthless project manager. Synthesize this project data into one punchy sentence focusing on momentum and bottlenecks. Completed: ${project.nextSteps.filter(t => t.done).map(t => t.text).join(', ')}. Incomplete: ${project.nextSteps.filter(t => !t.done).map(t => t.text).join(', ')}. Notes: ${project.comingUp.map(t => t.text).join(', ')}.`;
-        try {
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${aiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-          const data = await response.json();
-          await updateProjectField(project.id, 'status', data.candidates[0].content.parts[0].text.trim());
-        } catch (error) { alert("AI Generation failed."); } finally { setGeneratingIds(prev => ({ ...prev, [project.id]: false })); }
+      const addProject = async () => {
+        const id = Date.now();
+        await setDoc(doc(db, 'users', user.uid, 'projects', id.toString()), { id, name: 'New Project', category: '', status: '', nextSteps: '', notes: '' });
       };
 
-      const addProject = async () => { if (!user) return; const newProject = { id: Date.now(), name: 'New Project', category: '', status: '', nextSteps: [], comingUp: [] }; await setDoc(doc(db, 'users', user.uid, 'projects', newProject.id.toString()), newProject); };
-      const updateProjectField = async (projectId, field, value) => { if (!user) return; await updateDoc(doc(db, 'users', user.uid, 'projects', projectId.toString()), { [field]: value }); };
-      const deleteProject = async (projectId) => { if (!user) return; await deleteDoc(doc(db, 'users', user.uid, 'projects', projectId.toString())); };
-      const addListItem = async (projectId, listType) => { const project = projects.find(p => p.id === projectId); await updateProjectField(projectId, listType, [...project[listType], { id: Date.now(), text: '', done: false, indent: 0 }]); };
-      const handleEnterPress = async (projectId, listType, itemId, currentText) => { const project = projects.find(p => p.id === projectId); const currentItem = project[listType].find(item => item.id === itemId); const updatedList = project[listType].map(item => item.id === itemId ? { ...item, text: currentText } : item); updatedList.push({ id: Date.now(), text: '', done: false, indent: currentItem?.indent || 0 }); await updateProjectField(projectId, listType, updatedList); };
-      const handleTabPress = async (projectId, listType, itemId, shiftKey) => { const project = projects.find(p => p.id === projectId); const updatedList = project[listType].map(item => { if (item.id === itemId) { const newIndent = shiftKey ? Math.max(0, item.indent - 1) : Math.min(1, item.indent + 1); return { ...item, indent: newIndent }; } return item; }); await updateProjectField(projectId, listType, updatedList); };
-      const moveListItem = async (projectId, listType, index, direction) => { const project = projects.find(p => p.id === projectId); const list = [...project[listType]]; if (direction === 'up' && index > 0) [list[index - 1], list[index]] = [list[index], list[index - 1]]; else if (direction === 'down' && index < list.length - 1) [list[index], list[index + 1]] = [list[index + 1], list[index]]; await updateProjectField(projectId, listType, list); };
-      const updateListItem = async (projectId, listType, itemId, newText) => { const project = projects.find(p => p.id === projectId); const updatedList = project[listType].map(item => item.id === itemId ? { ...item, text: newText } : item); await updateProjectField(projectId, listType, updatedList); };
-      const toggleListItem = async (projectId, listType, itemId) => { const project = projects.find(p => p.id === projectId); const updatedList = project[listType].map(item => item.id === itemId ? { ...item, done: !item.done } : item); await updateProjectField(projectId, listType, updatedList); };
-      const deleteListItem = async (projectId, listType, itemId) => { const project = projects.find(p => p.id === projectId); const updatedList = project[listType].filter(item => item.id !== itemId); await updateProjectField(projectId, listType, updatedList); };
-      const archiveCompleted = async (projectId, listType) => { const project = projects.find(p => p.id === projectId); await updateProjectField(projectId, listType, project[listType].filter(item => !item.done)); };
+      const updateProject = async (id, field, val) => await updateDoc(doc(db, 'users', user.uid, 'projects', id.toString()), { [field]: val });
 
-      const renderList = (project, listType) => (
-        <div className="flex flex-col h-full">
-          <div className="flex flex-col gap-1 flex-1">
-            {project[listType].map((item, index) => (
-              <div key={item.id} className={`flex items-start gap-2 group ${item.indent === 1 ? 'ml-6 relative before:absolute before:content-[""] before:w-3 before:h-px before:bg-slate-300 before:-left-4 before:top-3.5' : ''}`}>
-                <button onClick={() => toggleListItem(project.id, listType, item.id)} className="mt-1 text-slate-400 hover:text-blue-600"><IconSquare /></button>
-                <AutoResizeTextarea value={item.text} onSave={(newText) => updateListItem(project.id, listType, item.id, newText)} onKeyDown={(e, currentText) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEnterPress(project.id, listType, item.id, currentText); } if (e.key === 'Tab') { e.preventDefault(); handleTabPress(project.id, listType, item.id, e.shiftKey); } if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); moveListItem(project.id, listType, index, 'up'); } if (e.altKey && e.key === 'ArrowDown') { e.preventDefault(); moveListItem(project.id, listType, index, 'down'); } }} className={`flex-1 text-sm bg-transparent border-none focus:ring-0 resize-none outline-none ${item.done ? 'text-slate-400 line-through' : 'text-slate-800'}`} />
-                <div className="flex opacity-0 group-hover:opacity-100 mt-1 gap-1">
-                  <button onClick={() => moveListItem(project.id, listType, index, 'up')}><IconArrowUp /></button>
-                  <button onClick={() => moveListItem(project.id, listType, index, 'down')}><IconArrowDown /></button>
-                  <button onClick={() => deleteListItem(project.id, listType, item.id)} className="text-red-500"><IconTrash /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <button onClick={() => addListItem(project.id, listType)} className="mt-2 text-xs text-blue-600 font-medium hover:underline flex items-center gap-1"><IconPlus /> Add Task</button>
-        </div>
-      );
-
-      if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-      if (!user) return <div className="min-h-screen flex items-center justify-center"><button onClick={handleLogin} className="bg-blue-600 text-white px-6 py-3 rounded-lg">Sign in with Google</button></div>;
+      if (loading) return <div className="p-8">Loading...</div>;
+      if (!user) return <div className="p-8"><button onClick={() => signInWithPopup(auth, googleProvider)} className="bg-blue-600 text-white p-2 rounded">Login</button></div>;
 
       return (
-        <div className="min-h-screen bg-slate-50 p-8">
-          <div className="max-w-[1400px] mx-auto bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold">Master Project Tracker</h1>
-              <div className="flex gap-3"><button onClick={() => setShowSettings(true)}><IconSettings /></button><button onClick={() => signOut(auth)}>Sign Out</button></div>
-            </div>
-            <table className="w-full text-left border-collapse">
-              <thead><tr className="bg-amber-400 text-sm"><th className="p-4">Project</th><th className="p-4">Category</th><th className="p-4">Status</th><th className="p-4">Next Steps</th><th className="p-4">Notes</th></tr></thead>
-              <tbody>
-                {projects.map(project => (
-                  <tr key={project.id} className="border-t align-top group">
-                    <td className="p-4"><AutoResizeTextarea value={project.name} onSave={(v) => updateProjectField(project.id, 'name', v)} className="w-full font-bold outline-none" /></td>
-                    <td className="p-4"><select value={project.category || ''} onChange={(e) => updateProjectField(project.id, 'category', e.target.value)} className={`text-sm rounded p-1 ${CATEGORY_COLORS[project.category] || ''}`}><option value="">Select...</option><option value="Personal">Personal</option><option value="Career">Career</option></select></td>
-                    <td className="p-4 relative group/status"><AutoResizeTextarea value={project.status} onSave={(v) => updateProjectField(project.id, 'status', v)} className="w-full text-sm outline-none" minRows={4} /><button onClick={() => generateStatus(project)} className="absolute bottom-2 right-2 opacity-0 group-hover/status:opacity-100 text-purple-600">{generatingIds[project.id] ? <IconLoader /> : <IconSparkles />}</button></td>
-                    <td className="p-4">{renderList(project, 'nextSteps')}</td>
-                    <td className="p-4">{renderList(project, 'comingUp')}</td>
+        <div className="min-h-screen bg-slate-50 p-6 font-sans text-slate-900">
+          <div className="max-w-[1400px] mx-auto bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <table className="w-full text-left border-collapse table-fixed">
+              <thead>
+                <tr className="bg-amber-400 text-amber-950 text-[10px] uppercase tracking-widest border-b border-amber-500/20">
+                  <th className="p-3 w-[15%] border-r border-amber-500/20">Project</th>
+                  <th className="p-3 w-[10%] border-r border-amber-500/20">Category</th>
+                  <th className="p-3 w-[25%] border-r border-amber-500/20">Status</th>
+                  <th className="p-3 w-[25%] border-r border-amber-500/20">Steps</th>
+                  <th className="p-3 w-[25%]">Notes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {projects.map(p => (
+                  <tr key={p.id} className="hover:bg-slate-50">
+                    <td className="p-3 border-r"><AutoResizeTextarea value={p.name} onSave={(v) => updateProject(p.id, 'name', v)} className="w-full font-bold bg-transparent resize-none outline-none" /></td>
+                    <td className="p-3 border-r">
+                      <select value={p.category} onChange={(e) => updateProject(p.id, 'category', e.target.value)} className={`text-[10px] font-bold p-1 rounded w-full ${CATEGORY_COLORS[p.category] || ''}`}>
+                        <option value="">None</option>
+                        <option value="Personal">Personal</option>
+                        <option value="Career">Career</option>
+                        <option value="Family">Family</option>
+                      </select>
+                    </td>
+                    <td className="p-3 border-r"><AutoResizeTextarea value={p.status} onSave={(v) => updateProject(p.id, 'status', v)} className="w-full text-xs bg-transparent resize-none outline-none" minRows={2} /></td>
+                    <td className="p-3 border-r"><AutoResizeTextarea value={p.nextSteps} onSave={(v) => updateProject(p.id, 'nextSteps', v)} className="w-full text-xs bg-transparent resize-none outline-none" minRows={2} /></td>
+                    <td className="p-3"><AutoResizeTextarea value={p.notes} onSave={(v) => updateProject(p.id, 'notes', v)} className="w-full text-xs bg-transparent resize-none outline-none" minRows={2} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <button onClick={addProject} className="mt-4 text-blue-600 font-bold">+ Add Project</button>
+            <div className="p-4 border-t">
+              <button onClick={addProject} className="text-xs font-bold text-blue-600 hover:underline">+ ADD PROJECT</button>
+            </div>
           </div>
-          {showSettings && (
-            <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center"><div className="bg-white p-6 rounded-lg w-96"><h2 className="font-bold mb-4">Settings</h2><input type="password" value={aiKey} onChange={(e) => setAiKey(e.target.value)} placeholder="Paste Gemini API Key" className="w-full border p-2 mb-4" /><div className="flex justify-end gap-2"><button onClick={() => setShowSettings(false)}>Cancel</button><button onClick={saveAiKey} className="bg-blue-600 text-white px-4 py-2 rounded">Save</button></div></div></div>
-          )}
         </div>
       );
     }
