@@ -18,11 +18,19 @@
   <script type="text/babel" data-type="module">
     const { useState, useEffect, useRef, useLayoutEffect } = React;
 
-    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+    const firebaseConfig = {
+      apiKey: "AIzaSyCiQU2ilhdlJkxD7-kWHl6lkO2LKQYnC7E",
+      authDomain: "master-tracker-7b104.firebaseapp.com",
+      projectId: "master-tracker-7b104",
+      storageBucket: "master-tracker-7b104.firebasestorage.app",
+      messagingSenderId: "706171177063",
+      appId: "1:706171177063:web:ac2415157560969c5a6cc2"
+    };
+    
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const appId = "default-app-id";
 
     const CATEGORY_COLORS = {
       'Personal': { border: 'border-l-blue-500', bg: 'bg-blue-100 bg-opacity-5', text: 'text-blue-800' },
@@ -105,8 +113,8 @@
                       <td className="p-5 align-top"><input className={`w-full font-bold text-lg bg-transparent border-none ${colors.text}`} value={p.name} onChange={(e) => updateProjectField(p.id, 'name', e.target.value)} /></td>
                       <td className="p-5 align-top"><select value={p.category} onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} className={`p-2 rounded text-base w-full bg-white/50 border ${colors.text}`}>{Object.keys(CATEGORY_COLORS).map(c => <option key={c} value={c}>{c || 'None'}</option>)}</select></td>
                       <td className="p-5 align-top"><AutoResizeTextarea value={p.status} onSave={(v) => updateProjectField(p.id, 'status', v)} className={`w-full text-base bg-transparent ${colors.text}`} /></td>
-                      <td className="p-5 align-top">...list logic omitted for brevity...</td>
-                      <td className="p-5 align-top">...list logic omitted for brevity...</td>
+                      <td className="p-5 align-top italic opacity-60">Add items...</td>
+                      <td className="p-5 align-top italic opacity-60">Add notes...</td>
                     </tr>
                   );
                 })}
