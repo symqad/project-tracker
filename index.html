@@ -16,7 +16,7 @@
   <div id="root"></div>
 
   <script type="text/babel" data-type="module">
-    const { useState, useEffect, useRef, useLayoutEffect } = React;
+    const { useState, useEffect } = React;
 
     const firebaseConfig = {
       apiKey: "AIzaSyCiQU2ilhdlJkxD7-kWHl6lkO2LKQYnC7E",
@@ -27,72 +27,42 @@
       appId: "1:706171177063:web:ac2415157560969c5a6cc2"
     };
     
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
     const appId = "default-app-id";
-
-    const CATEGORY_COLORS = {
-      'Personal': { border: 'border-l-blue-500', bg: 'bg-blue-100 bg-opacity-5', text: 'text-blue-800' },
-      'Career': { border: 'border-l-amber-500', bg: 'bg-amber-100 bg-opacity-5', text: 'text-amber-900' },
-      'Family': { border: 'border-l-pink-500', bg: 'bg-pink-100 bg-opacity-5', text: 'text-pink-800' },
-      'Spiritual': { border: 'border-l-green-500', bg: 'bg-green-100 bg-opacity-5', text: 'text-green-800' },
-      'Financial': { border: 'border-l-purple-500', bg: 'bg-purple-100 bg-opacity-5', text: 'text-purple-800' },
-      '': { border: 'border-l-slate-300', bg: 'bg-slate-100 bg-opacity-5', text: 'text-slate-500' }
-    };
-
-    const AutoResizeTextarea = ({ value, onSave, onKeyDown, autoFocus, className }) => {
-      const textareaRef = useRef(null);
-      const [localValue, setLocalValue] = useState(value);
-      useLayoutEffect(() => {
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-        }
-      }, [value]);
-      useEffect(() => { setLocalValue(value); }, [value]);
-      
-      return (
-        <textarea ref={textareaRef} value={localValue} onChange={(e) => setLocalValue(e.target.value)}
-          onBlur={() => onSave(localValue)} onKeyDown={(e) => onKeyDown(e, localValue)}
-          autoFocus={autoFocus} className={`${className} resize-none overflow-hidden`} rows={1} />
-      );
-    };
 
     function App() {
       const [user, setUser] = useState(null);
       const [loading, setLoading] = useState(true);
       const [projects, setProjects] = useState([]);
-      const [focusId, setFocusId] = useState(null);
 
       useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((u) => {
+        return auth.onAuthStateChanged((u) => {
           setUser(u);
           setLoading(false);
         });
-        return unsubscribe;
       }, []);
 
       useEffect(() => {
         if (!user) return;
-        const q = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('projects');
-        return q.onSnapshot(snapshot => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setProjects(data.length ? data : [{ id: '1', name: 'New Project', category: 'Career', status: '', nextSteps: [], notes: [] }]);
-        });
+        const path = `artifacts/${appId}/users/${user.uid}/projects`;
+        console.log("DEBUG PATH:", path); // Check this in your Console (F12)
+        
+        return db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('projects')
+          .onSnapshot(snapshot => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("DEBUG DATA FETCHED:", data); 
+            setProjects(data);
+          });
       }, [user]);
-
-      const handleGoogleLogin = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-      const updateProjectField = (id, field, val) => {
-        const docRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('projects').doc(id.toString());
-        docRef.set({ ...projects.find(p => p.id === id), [field]: val }, { merge: true });
-      };
 
       if (loading) return <div className="h-screen flex items-center justify-center">Authenticating...</div>;
       if (!user) return (
         <div className="h-screen flex flex-col items-center justify-center gap-4 bg-slate-100">
           <h1 className="text-2xl font-bold">Project Tracker</h1>
-          <button onClick={handleGoogleLogin} className="px-6 py-3 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition">
+          <button onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())} 
+            className="px-6 py-3 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition">
             Sign in with Google
           </button>
         </div>
@@ -106,18 +76,15 @@
                 <tr><th className="p-5">Project</th><th className="p-5">Category</th><th className="p-5">Status</th><th className="p-5">Next Steps</th><th className="p-5">Notes</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {projects.map(p => {
-                  const colors = CATEGORY_COLORS[p.category] || CATEGORY_COLORS[''];
-                  return (
-                    <tr key={p.id} className={`${colors.bg} ${colors.text}`}>
-                      <td className="p-5 align-top"><input className={`w-full font-bold text-lg bg-transparent border-none ${colors.text}`} value={p.name} onChange={(e) => updateProjectField(p.id, 'name', e.target.value)} /></td>
-                      <td className="p-5 align-top"><select value={p.category} onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} className={`p-2 rounded text-base w-full bg-white/50 border ${colors.text}`}>{Object.keys(CATEGORY_COLORS).map(c => <option key={c} value={c}>{c || 'None'}</option>)}</select></td>
-                      <td className="p-5 align-top"><AutoResizeTextarea value={p.status} onSave={(v) => updateProjectField(p.id, 'status', v)} className={`w-full text-base bg-transparent ${colors.text}`} /></td>
-                      <td className="p-5 align-top italic opacity-60">Add items...</td>
-                      <td className="p-5 align-top italic opacity-60">Add notes...</td>
-                    </tr>
-                  );
-                })}
+                {projects.map(p => (
+                  <tr key={p.id} className="bg-slate-100/50">
+                    <td className="p-5 font-bold">{p.name}</td>
+                    <td className="p-5">{p.category}</td>
+                    <td className="p-5">{p.status}</td>
+                    <td className="p-5">View/Edit Items</td>
+                    <td className="p-5">View/Edit Notes</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
