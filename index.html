@@ -33,32 +33,33 @@
 
     const CATEGORIES = ['Personal', 'Career', 'Family', 'Spiritual', 'Financial'];
 
-    const AutoResizeTextarea = ({ value, onSave, className }) => {
+    const AutoResizeTextarea = ({ value, onSave, placeholder }) => {
       const textareaRef = useRef(null);
-      const [localValue, setLocalValue] = useState(value || '');
+      const [val, setVal] = useState(value || '');
+
+      useEffect(() => { setVal(value || ''); }, [value]);
       useLayoutEffect(() => {
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
           textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
         }
-      }, [localValue]);
+      }, [val]);
       
       return (
-        <textarea ref={textareaRef} value={localValue} onChange={(e) => setLocalValue(e.target.value)}
-          onBlur={() => onSave(localValue)} className={`${className} resize-none overflow-hidden bg-transparent w-full`} rows={1} />
+        <textarea ref={textareaRef} value={val} placeholder={placeholder}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={() => onSave(val)} 
+          className="w-full resize-none overflow-hidden bg-transparent border-none focus:ring-0 text-sm" 
+          rows={1} />
       );
     };
 
     function App() {
       const [user, setUser] = useState(null);
-      const [loading, setLoading] = useState(true);
       const [projects, setProjects] = useState([]);
 
       useEffect(() => {
-        return auth.onAuthStateChanged((u) => {
-          setUser(u);
-          setLoading(false);
-        });
+        return auth.onAuthStateChanged((u) => setUser(u));
       }, []);
 
       useEffect(() => {
@@ -66,8 +67,6 @@
         return db.collection('users').doc(user.uid).collection('projects')
           .onSnapshot(snapshot => setProjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
       }, [user]);
-
-      const updateProject = (id, data) => db.collection('users').doc(user.uid).collection('projects').doc(id).set(data, { merge: true });
 
       const createProject = () => db.collection('users').doc(user.uid).collection('projects').add({
         name: 'New Project',
@@ -77,58 +76,72 @@
         notes: []
       });
 
-      const renderList = (project, field) => (
-        <div className="flex flex-col gap-1 text-sm">
-          {(project[field] || []).map((item, idx) => (
-            <div key={idx} className="flex items-center gap-2">
-              <input type="checkbox" checked={item.done} onChange={() => {
-                const list = [...project[field]];
-                list[idx].done = !list[idx].done;
-                updateProject(project.id, { [field]: list });
-              }} />
-              <input value={item.text} onChange={(e) => {
-                const list = [...project[field]];
-                list[idx].text = e.target.value;
-                updateProject(project.id, { [field]: list });
-              }} className="bg-transparent border-b border-transparent hover:border-slate-300 w-full" />
-            </div>
-          ))}
-          <button onClick={() => updateProject(project.id, { [field]: [...(project[field] || []), { text: '', done: false }] })} className="text-xs text-slate-400 mt-1 hover:text-amber-600">+ Add</button>
-        </div>
-      );
+      const handleAddItem = (project, field) => {
+        const newList = [...(project[field] || []), { text: '', done: false }];
+        db.collection('users').doc(user.uid).collection('projects').doc(project.id).update({ [field]: newList });
+      };
 
-      if (loading) return <div className="h-screen flex items-center justify-center">Authenticating...</div>;
+      const handleUpdateItem = (project, field, index, key, val) => {
+        const newList = [...(project[field] || [])];
+        newList[index][key] = val;
+        db.collection('users').doc(user.uid).collection('projects').doc(project.id).update({ [field]: newList });
+      };
+
       if (!user) return (
-        <div className="h-screen flex flex-col items-center justify-center gap-4 bg-slate-100">
+        <div className="h-screen flex items-center justify-center">
           <button onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())} className="px-6 py-3 bg-white border rounded-lg shadow-sm">Sign in with Google</button>
         </div>
       );
 
       return (
         <div className="p-6 bg-slate-50 min-h-screen">
-          <div className="max-w-[1200px] mx-auto bg-white rounded-lg border shadow-sm overflow-hidden">
-            <table className="w-full text-left border-collapse">
+          <div className="max-w-[1200px] mx-auto bg-white rounded-lg border shadow-sm">
+            <table className="w-full text-left">
               <thead className="bg-amber-400 text-amber-950 text-sm uppercase tracking-wider font-bold">
                 <tr><th className="p-5">Project</th><th className="p-5">Category</th><th className="p-5">Status</th><th className="p-5">Next Steps</th><th className="p-5">Notes</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {projects.map(p => (
                   <tr key={p.id}>
-                    <td className="p-5 font-bold"><input value={p.name} onChange={(e) => updateProject(p.id, { name: e.target.value })} className="bg-transparent w-full" /></td>
+                    <td className="p-5 font-bold">
+                      <input value={p.name} onChange={(e) => db.collection('users').doc(user.uid).collection('projects').doc(p.id).update({ name: e.target.value })} className="bg-transparent w-full" />
+                    </td>
                     <td className="p-5">
-                      <select value={p.category} onChange={(e) => updateProject(p.id, { category: e.target.value })} className="bg-transparent border-none">
+                      <select value={p.category} onChange={(e) => db.collection('users').doc(user.uid).collection('projects').doc(p.id).update({ category: e.target.value })} className="bg-transparent">
                         {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </td>
-                    <td className="p-5"><AutoResizeTextarea value={p.status} onSave={(v) => updateProject(p.id, { status: v })} /></td>
-                    <td className="p-5 align-top">{renderList(p, 'nextSteps')}</td>
-                    <td className="p-5 align-top">{renderList(p, 'notes')}</td>
+                    <td className="p-5">
+                      <AutoResizeTextarea value={p.status} onSave={(v) => db.collection('users').doc(user.uid).collection('projects').doc(p.id).update({ status: v })} />
+                    </td>
+                    <td className="p-5 align-top">
+                      <div className="flex flex-col gap-1">
+                        {(p.nextSteps || []).map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <input type="checkbox" checked={item.done} onChange={(e) => handleUpdateItem(p, 'nextSteps', idx, 'done', e.target.checked)} />
+                            <input value={item.text} onChange={(e) => handleUpdateItem(p, 'nextSteps', idx, 'text', e.target.value)} className="bg-transparent border-b border-slate-200 w-24" />
+                          </div>
+                        ))}
+                        <button onClick={() => handleAddItem(p, 'nextSteps')} className="text-xs text-slate-400 mt-1 hover:text-amber-600">+ Add</button>
+                      </div>
+                    </td>
+                    <td className="p-5 align-top">
+                      <div className="flex flex-col gap-1">
+                        {(p.notes || []).map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <input type="checkbox" checked={item.done} onChange={(e) => handleUpdateItem(p, 'notes', idx, 'done', e.target.checked)} />
+                            <input value={item.text} onChange={(e) => handleUpdateItem(p, 'notes', idx, 'text', e.target.value)} className="bg-transparent border-b border-slate-200 w-24" />
+                          </div>
+                        ))}
+                        <button onClick={() => handleAddItem(p, 'notes')} className="text-xs text-slate-400 mt-1 hover:text-amber-600">+ Add</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
             <div className="p-5 border-t">
-              <button onClick={createProject} className="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 font-bold">+ New Project</button>
+              <button onClick={createProject} className="px-4 py-2 bg-amber-500 text-white rounded font-bold">+ New Project</button>
             </div>
           </div>
         </div>
