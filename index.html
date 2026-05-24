@@ -30,7 +30,6 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
-    const appId = "default-app-id";
 
     function App() {
       const [user, setUser] = useState(null);
@@ -46,16 +45,22 @@
 
       useEffect(() => {
         if (!user) return;
-        const path = `artifacts/${appId}/users/${user.uid}/projects`;
-        console.log("DEBUG PATH:", path); // Check this in your Console (F12)
-        
-        return db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('projects')
-          .onSnapshot(snapshot => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            console.log("DEBUG DATA FETCHED:", data); 
-            setProjects(data);
-          });
+        // Direct path: users/{userId}/projects
+        return db.collection('users').doc(user.uid).collection('projects')
+          .onSnapshot(
+            snapshot => setProjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
+            err => console.error("Snapshot error:", err)
+          );
       }, [user]);
+
+      const createFirstProject = () => {
+        db.collection('users').doc(user.uid).collection('projects').add({
+          name: 'My First Project',
+          category: 'Career',
+          status: 'Started',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      };
 
       if (loading) return <div className="h-screen flex items-center justify-center">Authenticating...</div>;
       if (!user) return (
@@ -76,15 +81,21 @@
                 <tr><th className="p-5">Project</th><th className="p-5">Category</th><th className="p-5">Status</th><th className="p-5">Next Steps</th><th className="p-5">Notes</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {projects.map(p => (
+                {projects.length > 0 ? projects.map(p => (
                   <tr key={p.id} className="bg-slate-100/50">
                     <td className="p-5 font-bold">{p.name}</td>
                     <td className="p-5">{p.category}</td>
                     <td className="p-5">{p.status}</td>
-                    <td className="p-5">View/Edit Items</td>
-                    <td className="p-5">View/Edit Notes</td>
+                    <td className="p-5 text-sm italic">...</td>
+                    <td className="p-5 text-sm italic">...</td>
                   </tr>
-                ))}
+                )) : (
+                  <tr><td colSpan="5" className="p-10 text-center">
+                    <button onClick={createFirstProject} className="px-6 py-2 bg-amber-500 text-white rounded shadow hover:bg-amber-600">
+                      Create Your First Project
+                    </button>
+                  </td></tr>
+                )}
               </tbody>
             </table>
           </div>
