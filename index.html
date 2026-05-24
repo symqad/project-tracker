@@ -16,7 +16,7 @@
   <div id="root"></div>
 
   <script type="text/babel" data-type="module">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef, useLayoutEffect } = React;
 
     const firebaseConfig = {
       apiKey: "AIzaSyCiQU2ilhdlJkxD7-kWHl6lkO2LKQYnC7E",
@@ -30,6 +30,24 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
+
+    const CATEGORIES = ['Personal', 'Career', 'Family', 'Spiritual', 'Financial'];
+
+    const AutoResizeTextarea = ({ value, onSave, className }) => {
+      const textareaRef = useRef(null);
+      const [localValue, setLocalValue] = useState(value || '');
+      useLayoutEffect(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+        }
+      }, [localValue]);
+      
+      return (
+        <textarea ref={textareaRef} value={localValue} onChange={(e) => setLocalValue(e.target.value)}
+          onBlur={() => onSave(localValue)} className={`${className} resize-none overflow-hidden bg-transparent w-full`} rows={1} />
+      );
+    };
 
     function App() {
       const [user, setUser] = useState(null);
@@ -45,31 +63,44 @@
 
       useEffect(() => {
         if (!user) return;
-        // Direct path: users/{userId}/projects
         return db.collection('users').doc(user.uid).collection('projects')
-          .onSnapshot(
-            snapshot => setProjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
-            err => console.error("Snapshot error:", err)
-          );
+          .onSnapshot(snapshot => setProjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
       }, [user]);
 
-      const createFirstProject = () => {
-        db.collection('users').doc(user.uid).collection('projects').add({
-          name: 'My First Project',
-          category: 'Career',
-          status: 'Started',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      };
+      const updateProject = (id, data) => db.collection('users').doc(user.uid).collection('projects').doc(id).set(data, { merge: true });
+
+      const createProject = () => db.collection('users').doc(user.uid).collection('projects').add({
+        name: 'New Project',
+        category: 'Personal',
+        status: '',
+        nextSteps: [],
+        notes: []
+      });
+
+      const renderList = (project, field) => (
+        <div className="flex flex-col gap-1 text-sm">
+          {(project[field] || []).map((item, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <input type="checkbox" checked={item.done} onChange={() => {
+                const list = [...project[field]];
+                list[idx].done = !list[idx].done;
+                updateProject(project.id, { [field]: list });
+              }} />
+              <input value={item.text} onChange={(e) => {
+                const list = [...project[field]];
+                list[idx].text = e.target.value;
+                updateProject(project.id, { [field]: list });
+              }} className="bg-transparent border-b border-transparent hover:border-slate-300 w-full" />
+            </div>
+          ))}
+          <button onClick={() => updateProject(project.id, { [field]: [...(project[field] || []), { text: '', done: false }] })} className="text-xs text-slate-400 mt-1 hover:text-amber-600">+ Add</button>
+        </div>
+      );
 
       if (loading) return <div className="h-screen flex items-center justify-center">Authenticating...</div>;
       if (!user) return (
         <div className="h-screen flex flex-col items-center justify-center gap-4 bg-slate-100">
-          <h1 className="text-2xl font-bold">Project Tracker</h1>
-          <button onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())} 
-            className="px-6 py-3 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition">
-            Sign in with Google
-          </button>
+          <button onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())} className="px-6 py-3 bg-white border rounded-lg shadow-sm">Sign in with Google</button>
         </div>
       );
 
@@ -81,23 +112,24 @@
                 <tr><th className="p-5">Project</th><th className="p-5">Category</th><th className="p-5">Status</th><th className="p-5">Next Steps</th><th className="p-5">Notes</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {projects.length > 0 ? projects.map(p => (
-                  <tr key={p.id} className="bg-slate-100/50">
-                    <td className="p-5 font-bold">{p.name}</td>
-                    <td className="p-5">{p.category}</td>
-                    <td className="p-5">{p.status}</td>
-                    <td className="p-5 text-sm italic">...</td>
-                    <td className="p-5 text-sm italic">...</td>
+                {projects.map(p => (
+                  <tr key={p.id}>
+                    <td className="p-5 font-bold"><input value={p.name} onChange={(e) => updateProject(p.id, { name: e.target.value })} className="bg-transparent w-full" /></td>
+                    <td className="p-5">
+                      <select value={p.category} onChange={(e) => updateProject(p.id, { category: e.target.value })} className="bg-transparent border-none">
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </td>
+                    <td className="p-5"><AutoResizeTextarea value={p.status} onSave={(v) => updateProject(p.id, { status: v })} /></td>
+                    <td className="p-5 align-top">{renderList(p, 'nextSteps')}</td>
+                    <td className="p-5 align-top">{renderList(p, 'notes')}</td>
                   </tr>
-                )) : (
-                  <tr><td colSpan="5" className="p-10 text-center">
-                    <button onClick={createFirstProject} className="px-6 py-2 bg-amber-500 text-white rounded shadow hover:bg-amber-600">
-                      Create Your First Project
-                    </button>
-                  </td></tr>
-                )}
+                ))}
               </tbody>
             </table>
+            <div className="p-5 border-t">
+              <button onClick={createProject} className="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 font-bold">+ New Project</button>
+            </div>
           </div>
         </div>
       );
