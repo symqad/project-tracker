@@ -45,15 +45,16 @@
       console.warn("Firestore persistence state:", err.code);
     });
 
-    const CATEGORIES = ['Personal', 'Career', 'Family', 'Spiritual', 'Financial'];
+    const CATEGORIES = ['None', 'Personal', 'Career', 'Family', 'Spiritual', 'Financial'];
 
     const CATEGORY_COLORS = {
+      'None': { border: 'border-l-slate-900', bg: 'bg-slate-100/30', text: 'text-slate-900', label: 'text-slate-700' },
       'Personal': { border: 'border-l-blue-500', bg: 'bg-blue-50/40', text: 'text-blue-900', label: 'text-blue-600' },
       'Career': { border: 'border-l-amber-500', bg: 'bg-amber-50/40', text: 'text-amber-900', label: 'text-amber-600' },
       'Family': { border: 'border-l-pink-500', bg: 'bg-pink-50/40', text: 'text-pink-900', label: 'text-pink-600' },
       'Spiritual': { border: 'border-l-green-500', bg: 'bg-green-50/40', text: 'text-green-900', label: 'text-green-600' },
       'Financial': { border: 'border-l-purple-500', bg: 'bg-purple-50/40', text: 'text-purple-900', label: 'text-purple-600' },
-      '': { border: 'border-l-slate-300', bg: 'bg-slate-50/40', text: 'text-slate-900', label: 'text-slate-600' }
+      '': { border: 'border-l-slate-900', bg: 'bg-slate-100/30', text: 'text-slate-900', label: 'text-slate-700' }
     };
 
     // Focus-preserving input component to isolate local typing from incoming sync events
@@ -82,7 +83,7 @@
       );
     };
 
-    // Auto-growing textarea with input protection
+    // Auto-growing textarea with input protection and overflow buffers to prevent vertical clipping
     const AutoResizeTextarea = ({ value, onSave, onKeyDown, autoFocus, className, placeholder }) => {
       const textareaRef = useRef(null);
       const [val, setVal] = useState(value || '');
@@ -95,9 +96,11 @@
       }, [value]);
       
       useLayoutEffect(() => {
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+        const el = textareaRef.current;
+        if (el) {
+          el.style.height = 'auto';
+          // Adding a small height buffer to completely avoid vertical clipping across system fonts
+          el.style.height = `${el.scrollHeight + 4}px`;
         }
       }, [val]);
 
@@ -121,7 +124,7 @@
             if (val !== value) onSave(val); 
           }} 
           onKeyDown={(e) => { if (onKeyDown) onKeyDown(e, val); }}
-          className={`${className} resize-none overflow-hidden bg-transparent border-none focus:ring-0`} 
+          className={`${className} resize-none overflow-hidden bg-transparent border-none focus:ring-0 p-0`} 
           rows={1} 
         />
       );
@@ -170,7 +173,7 @@
               return {
                 id: doc.id,
                 name: raw.name || '',
-                category: raw.category || 'Personal',
+                category: raw.category || 'None',
                 status: raw.status || '',
                 nextSteps: Array.isArray(raw.nextSteps) ? raw.nextSteps : [],
                 notes: Array.isArray(raw.notes) ? raw.notes : [],
@@ -193,7 +196,7 @@
         if (!user) return;
         db.collection('users').doc(user.uid).collection('projects').add({
           name: 'New Project',
-          category: 'Personal',
+          category: 'None',
           status: '',
           nextSteps: [],
           notes: [],
@@ -238,7 +241,7 @@
       const renderList = (project, field, colors) => {
         const list = project[field] || [];
         return (
-          <div className="flex flex-col gap-1.5 text-sm">
+          <div className="flex flex-col gap-2 text-base">
             {list.map((item, idx) => {
               if (!item.id) item.id = `fallback-${idx}`;
               const indentLevel = item.indent || 0;
@@ -268,7 +271,7 @@
                       updateProjectField(project.id, field, newList);
                     }}
                     onKeyDown={(e, textVal) => handleListKeyDown(e, project, field, item, idx, textVal)}
-                    className={`flex-1 bg-transparent border-none focus:ring-0 text-sm py-0 px-1 leading-relaxed outline-none ${colors.text} ${item.done ? 'line-through opacity-50' : ''}`}
+                    className={`flex-1 bg-transparent border-none focus:ring-0 text-base py-0 px-1 leading-relaxed outline-none ${colors.text} ${item.done ? 'line-through opacity-50' : ''}`}
                   />
                 </div>
               );
@@ -343,7 +346,7 @@
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredProjects.map(p => {
-                    const colors = CATEGORY_COLORS[p.category] || CATEGORY_COLORS[''];
+                    const colors = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
                     return (
                       <tr key={p.id} className={`${colors.bg} hover:bg-slate-50/60 transition group/row`}>
                         <td className={`p-5 align-top border-l-4 ${colors.border}`}>
@@ -373,9 +376,9 @@
                         </td>
                         <td className="p-5 align-top">
                           <select 
-                            value={p.category || 'Personal'} 
+                            value={p.category || 'None'} 
                             onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
-                            className={`p-2 rounded text-sm bg-white border border-slate-200 outline-none font-semibold ${colors.text} cursor-pointer`}
+                            className={`p-2 rounded text-base bg-white border border-slate-200 outline-none font-semibold ${colors.text} cursor-pointer`}
                           >
                             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                           </select>
@@ -385,7 +388,7 @@
                             value={p.status || ''} 
                             placeholder="Current progress context..."
                             onSave={(v) => updateProjectField(p.id, 'status', v)} 
-                            className={`w-full text-sm leading-relaxed p-1 ${colors.text}`}
+                            className={`w-full text-base leading-relaxed p-1 ${colors.text}`}
                           />
                         </td>
                         <td className="p-5 align-top">
