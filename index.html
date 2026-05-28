@@ -19,6 +19,20 @@
       outline: none !important;
       box-shadow: none !important;
     }
+    /* Smooth custom scrollbars for the table overflow container */
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-900 antialiased font-sans">
@@ -293,7 +307,7 @@
 
       if (loading) return <div className="h-screen flex items-center justify-center text-slate-500 font-medium">Connecting...</div>;
       if (!user) return (
-        <div className="h-screen flex flex-col items-center justify-center gap-4 bg-slate-100">
+        <div className="h-screen flex flex-col items-center justify-center gap-4 bg-slate-100 p-4">
           <div className="bg-white p-8 rounded-xl shadow-md flex flex-col items-center gap-6 max-w-sm w-full text-center">
             <h1 className="text-2xl font-bold tracking-tight text-slate-800">Master Project Tracker</h1>
             <p className="text-slate-500 text-sm">Please sign in to access your secure database sandbox.</p>
@@ -311,114 +325,123 @@
 
       return (
         <ErrorBoundary>
-          <div className="p-6 bg-slate-50 min-h-screen">
-            <div className="max-w-[1300px] mx-auto mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h1 className="text-xl font-bold text-slate-800">My Workspace</h1>
-                <div className="text-xs text-slate-500 bg-slate-200 px-2 py-1 rounded font-mono">{user.email}</div>
+          <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
+            {/* Header Area - Stacked on Mobile, Row on Desktop */}
+            <div className="max-w-[1300px] mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <h1 className="text-2xl font-extrabold text-slate-850 tracking-tight">My Workspace</h1>
+                <div className="text-xs text-slate-500 bg-slate-200/80 px-2.5 py-1 rounded-full font-mono self-start sm:self-auto truncate max-w-[280px]">
+                  {user.email}
+                </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 self-end md:self-auto">
                 <button 
                   onClick={() => setShowArchived(!showArchived)} 
-                  className={`px-4 py-1.5 text-xs rounded-lg font-medium border transition ${!showArchived ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' : 'bg-amber-500 border-amber-600 text-white hover:bg-amber-600'}`}
+                  className={`px-4 py-2 text-xs rounded-lg font-bold border transition duration-150 ${!showArchived ? 'bg-white border-slate-200 text-slate-750 hover:bg-slate-50' : 'bg-amber-500 border-amber-600 text-white hover:bg-amber-600'}`}
                 >
                   {showArchived ? "View Active Projects" : "View Archived Projects"}
                 </button>
                 <button 
                   onClick={() => auth.signOut()} 
-                  className="px-4 py-1.5 text-xs bg-white border border-slate-200 text-slate-500 rounded-lg hover:text-red-600 hover:border-red-200 transition"
+                  className="px-4 py-2 text-xs bg-white border border-slate-200 text-slate-500 rounded-lg font-semibold hover:text-red-600 hover:border-red-200 transition duration-150"
                 >
                   Sign Out
                 </button>
               </div>
             </div>
 
+            {/* Core Card Container */}
             <div className="max-w-[1300px] mx-auto bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-amber-400 text-amber-950 text-sm uppercase tracking-wider font-bold">
-                  <tr>
-                    <th className="p-5 w-[20%]">Project</th>
-                    <th className="p-5 w-[15%]">Category</th>
-                    <th className="p-5 w-[20%]">Status</th>
-                    <th className="p-5 w-[22%]">Next Steps</th>
-                    <th className="p-5 w-[23%]">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredProjects.map(p => {
-                    const colors = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
-                    return (
-                      <tr key={p.id} className={`${colors.bg} hover:bg-slate-50/60 transition group/row`}>
-                        <td className={`p-5 align-top border-l-4 ${colors.border}`}>
-                          <div className="flex flex-col gap-1">
-                            <AutoSaveInput 
-                              value={p.name} 
-                              placeholder="Project Name..."
-                              onSave={(v) => updateProjectField(p.id, 'name', v)} 
-                              className={`w-full font-bold text-lg bg-transparent border-none outline-none focus:ring-0 ${colors.text}`} 
-                            />
-                            <div className="flex items-center gap-2 opacity-0 group-hover/row:opacity-100 transition duration-150 text-xs mt-2">
-                              <button 
-                                onClick={() => updateProjectField(p.id, 'archived', !p.archived)} 
-                                className="text-slate-400 hover:text-amber-600 transition"
-                              >
-                                {p.archived ? "Unarchive" : "Archive"}
-                              </button>
-                              <span className="text-slate-300">|</span>
-                              <button 
-                                onClick={() => deleteProject(p.id)} 
-                                className="text-slate-400 hover:text-red-600 transition"
-                              >
-                                Delete
-                              </button>
+              
+              {/* Horizontal Scroll wrapper for responsive desktop layout on mobile devices */}
+              <div className="overflow-x-auto w-full custom-scrollbar">
+                <table className="w-full text-left border-collapse min-w-[1100px] table-fixed">
+                  <thead className="bg-amber-400 text-amber-955 text-sm uppercase tracking-wider font-extrabold">
+                    <tr>
+                      <th className="p-5 w-[22%]">Project</th>
+                      <th className="p-5 w-[14%]">Category</th>
+                      <th className="p-5 w-[20%]">Status</th>
+                      <th className="p-5 w-[22%]">Next Steps</th>
+                      <th className="p-5 w-[22%]">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredProjects.map(p => {
+                      const colors = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
+                      return (
+                        <tr key={p.id} className={`${colors.bg} hover:bg-slate-50/60 transition group/row`}>
+                          <td className={`p-5 align-top border-l-4 ${colors.border}`}>
+                            <div className="flex flex-col gap-1">
+                              <AutoSaveInput 
+                                value={p.name} 
+                                placeholder="Project Name..."
+                                onSave={(v) => updateProjectField(p.id, 'name', v)} 
+                                className={`w-full font-bold text-lg bg-transparent border-none outline-none focus:ring-0 ${colors.text}`} 
+                              />
+                              <div className="flex items-center gap-2 opacity-0 group-hover/row:opacity-100 transition duration-150 text-xs mt-2">
+                                <button 
+                                  onClick={() => updateProjectField(p.id, 'archived', !p.archived)} 
+                                  className="text-slate-400 hover:text-amber-600 font-medium transition"
+                                >
+                                  {p.archived ? "Unarchive" : "Archive"}
+                                </button>
+                                <span className="text-slate-300">|</span>
+                                <button 
+                                  onClick={() => deleteProject(p.id)} 
+                                  className="text-slate-400 hover:text-red-600 font-medium transition"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-5 align-top">
-                          <select 
-                            value={p.category || 'None'} 
-                            onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
-                            className={`p-2 rounded text-base bg-white border border-slate-200 outline-none font-semibold ${colors.text} cursor-pointer`}
-                          >
-                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                        </td>
-                        <td className="p-5 align-top">
-                          <AutoResizeTextarea 
-                            value={p.status || ''} 
-                            placeholder="Current progress context..."
-                            onSave={(v) => updateProjectField(p.id, 'status', v)} 
-                            className={`w-full text-base leading-relaxed p-1 ${colors.text}`}
-                          />
-                        </td>
-                        <td className="p-5 align-top">
-                          {renderList(p, 'nextSteps', colors)}
-                        </td>
-                        <td className="p-5 align-top">
-                          {renderList(p, 'notes', colors)}
+                          </td>
+                          <td className="p-5 align-top">
+                            <select 
+                              value={p.category || 'None'} 
+                              onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
+                              className={`p-2 rounded text-base bg-white border border-slate-200 outline-none font-semibold ${colors.text} cursor-pointer w-full max-w-[130px]`}
+                            >
+                              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          </td>
+                          <td className="p-5 align-top">
+                            <AutoResizeTextarea 
+                              value={p.status || ''} 
+                              placeholder="Current progress context..."
+                              onSave={(v) => updateProjectField(p.id, 'status', v)} 
+                              className={`w-full text-base leading-relaxed p-1 ${colors.text}`}
+                            />
+                          </td>
+                          <td className="p-5 align-top">
+                            {renderList(p, 'nextSteps', colors)}
+                          </td>
+                          <td className="p-5 align-top">
+                            {renderList(p, 'notes', colors)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredProjects.length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="p-16 text-center text-slate-400">
+                          <p className="mb-4 text-sm font-medium">
+                            {showArchived ? "No archived projects." : "Your workspace is empty."}
+                          </p>
+                          {!showArchived && (
+                            <button 
+                              onClick={createProject} 
+                              className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded shadow transition"
+                            >
+                              Create Your First Project
+                            </button>
+                          )}
                         </td>
                       </tr>
-                    );
-                  })}
-                  {filteredProjects.length === 0 && (
-                    <tr>
-                      <td colSpan="5" className="p-16 text-center text-slate-400">
-                        <p className="mb-4 text-sm font-medium">
-                          {showArchived ? "No archived projects." : "Your workspace is empty."}
-                        </p>
-                        {!showArchived && (
-                          <button 
-                            onClick={createProject} 
-                            className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded shadow transition"
-                          >
-                            Create Your First Project
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
               {filteredProjects.length > 0 && !showArchived && (
                 <div className="p-5 border-t border-slate-100 bg-slate-50/50">
                   <button 
