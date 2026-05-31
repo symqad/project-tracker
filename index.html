@@ -71,9 +71,9 @@
     };
 
     const PRIORITIES = [
-      { level: 0, label: '', icon: '' },
-      { level: 1, label: '❗', icon: '❗' },
-      { level: 2, label: '‼️', icon: '‼️' }
+      { level: 0, label: '' },
+      { level: 1, label: '❗' },
+      { level: 2, label: '‼️' }
     ];
 
     const AutoSaveInput = ({ value, onSave, className, placeholder }) => {
@@ -424,7 +424,7 @@
 
                 <button 
                   onClick={() => setShowArchived(!showArchived)} 
-                  className={`px-4 py-2 text-xs rounded-lg font-bold border transition duration-150 ${!showArchived ? 'bg-white border-slate-200 text-slate-750 hover:bg-slate-50' : 'bg-amber-500 border-amber-600 text-white hover:bg-amber-600'}`}
+                  className={`px-4 py-2 text-xs rounded-lg font-bold border transition duration-150 ${!showArchived ? 'bg-white border-slate-200 text-slate-755 hover:bg-slate-50' : 'bg-amber-500 border-amber-600 text-white hover:bg-amber-600'}`}
                 >
                   {showArchived ? "View Active Projects" : "View Archived Projects"}
                 </button>
@@ -494,20 +494,10 @@
                               >
                                 {PRIORITIES.map(opt => (
                                   <option key={opt.level} value={opt.level}>
-                                    {opt.icon ? `${opt.icon} ` : ''}{opt.label}
+                                    {opt.label}
                                   </option>
                                 ))}
                               </select>
-                              {p.priority === 2 && (
-                                <span className="text-[11px] font-extrabold text-red-600 uppercase tracking-widest text-center mt-1 block">
-                                  Escalation
-                                </span>
-                              )}
-                              {p.priority === 1 && (
-                                <span className="text-[11px] font-extrabold text-amber-600 uppercase tracking-widest text-center mt-1 block">
-                                  Priority
-                                </span>
-                              )}
                             </div>
                           </td>
 
