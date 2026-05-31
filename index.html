@@ -57,22 +57,23 @@
       console.warn("Firestore persistence state:", err.code);
     });
 
-    const CATEGORIES = ['None', 'Personal', 'Career', 'Family', 'Spiritual', 'Financial'];
+    const CATEGORIES = ['None', 'Personal', 'Career', 'Family', 'Spiritual', 'Financial', 'Learning'];
 
     const CATEGORY_COLORS = {
       'None': { border: 'border-l-slate-900', bg: 'bg-slate-100/30', text: 'text-slate-900', label: 'text-slate-700' },
       'Personal': { border: 'border-l-blue-500', bg: 'bg-blue-50/40', text: 'text-blue-900', label: 'text-blue-600' },
-      'Career': { border: 'border-l-amber-500', bg: 'bg-amber-50/40', text: 'text-amber-900', label: 'text-amber-600' },
-      'Family': { border: 'border-l-pink-500', bg: 'bg-pink-50/40', text: 'text-pink-900', label: 'text-pink-600' },
+      'Career': { border: 'border-l-orange-500', bg: 'bg-orange-50/40', text: 'text-orange-950', label: 'text-orange-600' }, // Dark Orange
+      'Family': { border: 'border-l-fuchsia-500', bg: 'bg-fuchsia-50/40', text: 'text-fuchsia-950', label: 'text-fuchsia-600' }, // Magenta
       'Spiritual': { border: 'border-l-green-500', bg: 'bg-green-50/40', text: 'text-green-900', label: 'text-green-600' },
       'Financial': { border: 'border-l-purple-500', bg: 'bg-purple-50/40', text: 'text-purple-900', label: 'text-purple-600' },
+      'Learning': { border: 'border-l-pink-500', bg: 'bg-pink-50/40', text: 'text-pink-900', label: 'text-pink-600' }, // Pink Learning Category
       '': { border: 'border-l-slate-900', bg: 'bg-slate-100/30', text: 'text-slate-900', label: 'text-slate-700' }
     };
 
     const PRIORITIES = [
-      { level: 0, label: 'Normal', icon: '' },
-      { level: 1, label: 'Priority', icon: '❗' },
-      { level: 2, label: 'Escalation', icon: '‼️' }
+      { level: 0, label: '', icon: '' },
+      { level: 1, label: '❗', icon: '❗' },
+      { level: 2, label: '‼️', icon: '‼️' }
     ];
 
     const AutoSaveInput = ({ value, onSave, className, placeholder }) => {
@@ -442,13 +443,13 @@
                 <table className="w-full text-left border-collapse min-w-[1250px] table-fixed">
                   <thead className="bg-amber-400 text-amber-955 text-sm uppercase tracking-wider font-extrabold">
                     <tr>
-                      <th className="p-5 w-[8%] text-center">Order</th>
-                      <th className="p-5 w-[11%]">Priority</th>
                       <th className="p-5 w-[18%]">Project</th>
+                      <th className="p-5 w-[11%]">Priority</th>
                       <th className="p-5 w-[13%]">Category</th>
                       <th className="p-5 w-[18%]">Status</th>
                       <th className="p-5 w-[16%]">Next Steps</th>
                       <th className="p-5 w-[16%]">Notes</th>
+                      <th className="p-5 w-[8%] text-center">Order</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -456,32 +457,31 @@
                       const colors = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
                       return (
                         <tr key={p.id} className={`${colors.bg} hover:bg-slate-50/60 transition group/row`}>
-                          {/* Manual Reordering Controls */}
-                          <td className="p-4 align-top text-center border-l-4 border-l-transparent">
-                            {isManualOrderingActive ? (
-                              <div className="flex items-center justify-center gap-1.5 mt-1">
+                          {/* Project Name & Actions */}
+                          <td className={`p-5 align-top border-l-4 ${colors.border}`}>
+                            <div className="flex flex-col gap-1">
+                              <AutoSaveInput 
+                                value={p.name} 
+                                placeholder="Project Name..."
+                                onSave={(v) => updateProjectField(p.id, 'name', v)} 
+                                className={`w-full font-bold text-lg bg-transparent border-none outline-none focus:ring-0 ${colors.text}`} 
+                              />
+                              <div className="flex items-center gap-2 opacity-0 group-hover/row:opacity-100 transition duration-150 text-xs mt-2">
                                 <button 
-                                  onClick={() => moveProject(index, -1)}
-                                  disabled={index === 0}
-                                  className="p-1 text-slate-400 hover:text-amber-600 disabled:opacity-20 transition"
-                                  title="Move Up"
+                                  onClick={() => updateProjectField(p.id, 'archived', !p.archived)} 
+                                  className="text-slate-400 hover:text-amber-600 font-medium transition"
                                 >
-                                  ▲
+                                  {p.archived ? "Unarchive" : "Archive"}
                                 </button>
+                                <span className="text-slate-300">|</span>
                                 <button 
-                                  onClick={() => moveProject(index, 1)}
-                                  disabled={index === displayedProjects.length - 1}
-                                  className="p-1 text-slate-400 hover:text-amber-600 disabled:opacity-20 transition"
-                                  title="Move Down"
+                                  onClick={() => deleteProject(p.id)} 
+                                  className="text-slate-400 hover:text-red-600 font-medium transition"
                                 >
-                                  ▼
+                                  Delete
                                 </button>
                               </div>
-                            ) : (
-                              <div className="text-xs text-slate-400 font-medium italic mt-2" title="Manual reordering is disabled while active sort or filters are applied.">
-                                Sorted
-                              </div>
-                            )}
+                            </div>
                           </td>
 
                           {/* Dynamic Priority Toggle Cell */}
@@ -508,33 +508,6 @@
                                   Priority
                                 </span>
                               )}
-                            </div>
-                          </td>
-
-                          {/* Project Name & Actions */}
-                          <td className="p-5 align-top">
-                            <div className="flex flex-col gap-1">
-                              <AutoSaveInput 
-                                value={p.name} 
-                                placeholder="Project Name..."
-                                onSave={(v) => updateProjectField(p.id, 'name', v)} 
-                                className={`w-full font-bold text-lg bg-transparent border-none outline-none focus:ring-0 ${colors.text}`} 
-                              />
-                              <div className="flex items-center gap-2 opacity-0 group-hover/row:opacity-100 transition duration-150 text-xs mt-2">
-                                <button 
-                                  onClick={() => updateProjectField(p.id, 'archived', !p.archived)} 
-                                  className="text-slate-450 hover:text-amber-600 font-medium transition"
-                                >
-                                  {p.archived ? "Unarchive" : "Archive"}
-                                </button>
-                                <span className="text-slate-300">|</span>
-                                <button 
-                                  onClick={() => deleteProject(p.id)} 
-                                  className="text-slate-400 hover:text-red-600 font-medium transition"
-                                >
-                                  Delete
-                                </button>
-                              </div>
                             </div>
                           </td>
 
@@ -567,6 +540,34 @@
                           {/* Notes List with Tab/Shift-Tab nesting support */}
                           <td className="p-5 align-top">
                             {renderList(p, 'notes', colors)}
+                          </td>
+
+                          {/* Manual Reordering Controls */}
+                          <td className="p-4 align-top text-center">
+                            {isManualOrderingActive ? (
+                              <div className="flex items-center justify-center gap-1.5 mt-1">
+                                <button 
+                                  onClick={() => moveProject(index, -1)}
+                                  disabled={index === 0}
+                                  className="p-1 text-slate-400 hover:text-amber-600 disabled:opacity-20 transition"
+                                  title="Move Up"
+                                >
+                                  ▲
+                                </button>
+                                <button 
+                                  onClick={() => moveProject(index, 1)}
+                                  disabled={index === displayedProjects.length - 1}
+                                  className="p-1 text-slate-400 hover:text-amber-600 disabled:opacity-20 transition"
+                                  title="Move Down"
+                                >
+                                  ▼
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-slate-400 font-medium italic mt-2" title="Manual reordering is disabled while active sort or filters are applied.">
+                                Sorted
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
