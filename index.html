@@ -15,7 +15,7 @@
   <!-- Styling framework -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    textarea:focus, input:focus, select:focus {
+    textarea:focus, input:focus, select:focus, [contenteditable]:focus {
       outline: none !important;
       box-shadow: none !important;
     }
@@ -31,6 +31,13 @@
     }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
+    }
+    /* Elegant placeholder engine for custom contentEditable nodes */
+    [contenteditable]:empty:before {
+      content: attr(data-placeholder);
+      color: #94a3b8;
+      opacity: 0.6;
+      cursor: text;
     }
   </style>
 </head>
@@ -62,8 +69,8 @@
     const CATEGORY_COLORS = {
       'None': { border: 'border-l-slate-900', bg: 'bg-slate-100/30', text: 'text-slate-900', label: 'text-slate-700' },
       'Personal': { border: 'border-l-blue-500', bg: 'bg-blue-50/40', text: 'text-blue-900', label: 'text-blue-600' },
-      'Career': { border: 'border-l-orange-500', bg: 'bg-orange-50/40', text: 'text-orange-950', label: 'text-orange-600' }, // Dark Orange
-      'Family': { border: 'border-l-fuchsia-500', bg: 'bg-fuchsia-50/40', text: 'text-fuchsia-950', label: 'text-fuchsia-600' }, // Magenta
+      'Career': { border: 'border-l-orange-500', bg: 'bg-orange-50/40', text: 'text-orange-955', label: 'text-orange-650' }, // Dark Orange
+      'Family': { border: 'border-l-fuchsia-500', bg: 'bg-fuchsia-50/40', text: 'text-fuchsia-955', label: 'text-fuchsia-600' }, // Magenta
       'Spiritual': { border: 'border-l-green-500', bg: 'bg-green-50/40', text: 'text-green-900', label: 'text-green-600' },
       'Financial': { border: 'border-l-purple-500', bg: 'bg-purple-50/40', text: 'text-purple-900', label: 'text-purple-600' },
       'Learning': { border: 'border-l-pink-500', bg: 'bg-pink-50/40', text: 'text-pink-900', label: 'text-pink-600' }, // Pink Learning Category
@@ -76,31 +83,50 @@
       { level: 2, label: '‼️' }
     ];
 
+    // Focus-preserving contentEditable Input: Permits natural wrapping without textarea UI weight
     const AutoSaveInput = ({ value, onSave, className, placeholder }) => {
-      const [val, setVal] = useState(value || '');
-      const isFocused = useRef(false);
+      const elRef = useRef(null);
+      const committedValue = useRef(value || '');
 
       useEffect(() => {
-        if (!isFocused.current) {
-          setVal(value || '');
+        if (elRef.current && document.activeElement !== elRef.current) {
+          elRef.current.innerText = value || '';
+          committedValue.current = value || '';
         }
       }, [value]);
 
+      const handleBlur = () => {
+        if (elRef.current) {
+          const currentVal = elRef.current.innerText.trim();
+          if (currentVal !== committedValue.current) {
+            onSave(currentVal);
+            committedValue.current = currentVal;
+          }
+        }
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault(); // Deny multi-line linebreaks inside project headers
+          elRef.current.blur();
+        }
+      };
+
       return (
-        <input 
-          value={val} 
-          placeholder={placeholder}
-          onChange={(e) => setVal(e.target.value)}
-          onFocus={() => { isFocused.current = true; }}
-          onBlur={() => { 
-            isFocused.current = false; 
-            if (val !== value) onSave(val); 
-          }}
-          className={className}
+        <div 
+          ref={elRef}
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className={`${className} cursor-text break-words whitespace-normal outline-none focus:outline-none min-h-[1.5em] w-full`}
+          data-placeholder={placeholder}
+          style={{ wordBreak: 'break-word', display: 'inline-block' }}
         />
       );
     };
 
+    // Auto-growing textarea with input protection and overflow buffers to prevent vertical clipping
     const AutoResizeTextarea = ({ value, onSave, onKeyDown, autoFocus, className, placeholder }) => {
       const textareaRef = useRef(null);
       const [val, setVal] = useState(value || '');
@@ -140,7 +166,7 @@
             if (val !== value) onSave(val); 
           }} 
           onKeyDown={(e) => { if (onKeyDown) onKeyDown(e, val); }}
-          className={`${className} resize-none overflow-hidden bg-transparent border-none focus:ring-0 p-0`} 
+          className={`${className} resize-none overflow-hidden bg-transparent border-none focus:ring-0 p-0 break-words whitespace-normal`} 
           rows={1} 
         />
       );
@@ -230,7 +256,7 @@
         if (!user) return;
         const maxOrder = projects.length > 0 ? Math.max(...projects.map(p => p.orderIndex || 0)) : 0;
         db.collection('users').doc(user.uid).collection('projects').add({
-          name: 'New Project',
+          name: '',
           category: 'None',
           priority: 0,
           orderIndex: maxOrder + 100,
@@ -296,14 +322,14 @@
       const renderList = (project, field, colors) => {
         const list = project[field] || [];
         return (
-          <div className="flex flex-col gap-1.5 text-base">
+          <div className="flex flex-col gap-1.5 text-base break-words">
             {list.map((item, idx) => {
               if (!item.id) item.id = `fallback-${idx}`;
               const indentLevel = item.indent || 0;
               return (
                 <div 
                   key={item.id} 
-                  className="flex items-start gap-2 group transition-all duration-150" 
+                  className="flex items-start gap-2 group transition-all duration-150 break-words" 
                   style={{ marginLeft: `${indentLevel * 16}px` }}
                 >
                   <input 
@@ -314,7 +340,7 @@
                       newList[idx] = { ...newList[idx], done: e.target.checked };
                       updateProjectField(project.id, field, newList);
                     }} 
-                    className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer flex-shrink-0"
                   />
                   <AutoResizeTextarea
                     value={item.text || ''}
@@ -326,7 +352,7 @@
                       updateProjectField(project.id, field, newList);
                     }}
                     onKeyDown={(e, textVal) => handleListKeyDown(e, project, field, item, idx, textVal)}
-                    className={`flex-1 bg-transparent border-none focus:ring-0 text-base py-0 px-1 leading-relaxed outline-none ${colors.text} ${item.done ? 'line-through opacity-50' : ''}`}
+                    className={`flex-1 bg-transparent border-none focus:ring-0 text-base py-0 px-1 leading-relaxed outline-none break-words ${colors.text} ${item.done ? 'line-through opacity-50' : ''}`}
                   />
                 </div>
               );
@@ -457,14 +483,14 @@
                       const colors = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
                       return (
                         <tr key={p.id} className={`${colors.bg} hover:bg-slate-50/60 transition group/row`}>
-                          {/* Project Name & Actions */}
-                          <td className={`p-5 align-top border-l-4 ${colors.border}`}>
-                            <div className="flex flex-col gap-1">
+                          {/* Project Name (Wrap-enabled inline container) */}
+                          <td className={`p-5 align-top border-l-4 ${colors.border} break-words`}>
+                            <div className="flex flex-col gap-1 break-words">
                               <AutoSaveInput 
                                 value={p.name} 
                                 placeholder="Project Name..."
                                 onSave={(v) => updateProjectField(p.id, 'name', v)} 
-                                className={`w-full font-bold text-lg bg-transparent border-none outline-none focus:ring-0 ${colors.text}`} 
+                                className={`w-full font-bold text-lg bg-transparent border-none outline-none focus:ring-0 ${colors.text} break-words whitespace-normal`} 
                               />
                               <div className="flex items-center gap-2 opacity-0 group-hover/row:opacity-100 transition duration-150 text-xs mt-2">
                                 <button 
@@ -512,23 +538,23 @@
                             </select>
                           </td>
 
-                          {/* Plain Status Field */}
-                          <td className="p-5 align-top">
+                          {/* Plain Status Field (Wraps completely) */}
+                          <td className="p-5 align-top break-words">
                             <AutoResizeTextarea 
                               value={p.status || ''} 
-                              placeholder="Current status context..."
+                              placeholder="..."
                               onSave={(v) => updateProjectField(p.id, 'status', v)} 
-                              className={`w-full text-base leading-relaxed p-1 ${colors.text}`}
+                              className={`w-full text-base leading-relaxed p-1 ${colors.text} break-words whitespace-normal`}
                             />
                           </td>
 
-                          {/* Next Steps List with Tab/Shift-Tab nesting support */}
-                          <td className="p-5 align-top">
+                          {/* Next Steps List */}
+                          <td className="p-5 align-top break-words">
                             {renderList(p, 'nextSteps', colors)}
                           </td>
 
-                          {/* Notes List with Tab/Shift-Tab nesting support */}
-                          <td className="p-5 align-top">
+                          {/* Notes List */}
+                          <td className="p-5 align-top break-words">
                             {renderList(p, 'notes', colors)}
                           </td>
 
