@@ -69,8 +69,8 @@
     const CATEGORY_COLORS = {
       'None': { border: 'border-l-slate-900', bg: 'bg-slate-100/30', text: 'text-slate-900', label: 'text-slate-700' },
       'Personal': { border: 'border-l-blue-500', bg: 'bg-blue-50/40', text: 'text-blue-900', label: 'text-blue-600' },
-      'Career': { border: 'border-l-orange-500', bg: 'bg-orange-50/40', text: 'text-orange-955', label: 'text-orange-650' }, // Dark Orange
-      'Family': { border: 'border-l-fuchsia-500', bg: 'bg-fuchsia-50/40', text: 'text-fuchsia-955', label: 'text-fuchsia-600' }, // Magenta
+      'Career': { border: 'border-l-orange-500', bg: 'bg-orange-50/40', text: 'text-orange-900', label: 'text-orange-700' }, // Dark Orange Fixed
+      'Family': { border: 'border-l-fuchsia-500', bg: 'bg-fuchsia-50/40', text: 'text-fuchsia-900', label: 'text-fuchsia-700' }, // Magenta Fixed
       'Spiritual': { border: 'border-l-green-500', bg: 'bg-green-50/40', text: 'text-green-900', label: 'text-green-600' },
       'Financial': { border: 'border-l-purple-500', bg: 'bg-purple-50/40', text: 'text-purple-900', label: 'text-purple-600' },
       'Learning': { border: 'border-l-pink-500', bg: 'bg-pink-50/40', text: 'text-pink-900', label: 'text-pink-600' }, // Pink Learning Category
@@ -322,14 +322,14 @@
       const renderList = (project, field, colors) => {
         const list = project[field] || [];
         return (
-          <div className="flex flex-col gap-1.5 text-base break-words">
+          <div className="flex flex-col gap-1.5 text-sm break-words">
             {list.map((item, idx) => {
               if (!item.id) item.id = `fallback-${idx}`;
               const indentLevel = item.indent || 0;
               return (
                 <div 
                   key={item.id} 
-                  className="flex items-start gap-2 group transition-all duration-150 break-words" 
+                  className="flex items-start gap-2 group transition-all duration-150 break-words border-b border-slate-200/40 pb-1.5 last:border-0" 
                   style={{ marginLeft: `${indentLevel * 16}px` }}
                 >
                   <input 
@@ -352,7 +352,7 @@
                       updateProjectField(project.id, field, newList);
                     }}
                     onKeyDown={(e, textVal) => handleListKeyDown(e, project, field, item, idx, textVal)}
-                    className={`flex-1 bg-transparent border-none focus:ring-0 text-base py-0 px-1 leading-relaxed outline-none break-words ${colors.text} ${item.done ? 'line-through opacity-50' : ''}`}
+                    className={`flex-1 bg-transparent border-none focus:ring-0 text-sm py-0 px-1 leading-relaxed outline-none break-words ${colors.text} ${item.done ? 'line-through opacity-50' : ''}`}
                   />
                 </div>
               );
@@ -469,20 +469,20 @@
                 <table className="w-full text-left border-collapse min-w-[1250px] table-fixed">
                   <thead className="bg-amber-400 text-amber-955 text-sm uppercase tracking-wider font-extrabold">
                     <tr>
-                      <th className="p-5 w-[18%]">Project</th>
-                      <th className="p-5 w-[11%]">Priority</th>
-                      <th className="p-5 w-[13%]">Category</th>
-                      <th className="p-5 w-[18%]">Status</th>
-                      <th className="p-5 w-[16%]">Next Steps</th>
-                      <th className="p-5 w-[16%]">Notes</th>
-                      <th className="p-5 w-[8%] text-center">Order</th>
+                      <th className="p-5 w-[16%]">Project</th>
+                      <th className="p-5 w-[7%]">Priority</th>
+                      <th className="p-5 w-[10%]">Category</th>
+                      <th className="p-5 w-[15%]">Status</th>
+                      <th className="p-5 w-[22%]">Next Steps</th>
+                      <th className="p-5 w-[25%]">Notes</th>
+                      <th className="p-5 w-[5%] text-center">Order</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-200">
                     {displayedProjects.map((p, index) => {
                       const colors = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
                       return (
-                        <tr key={p.id} className={`${colors.bg} hover:bg-slate-50/60 transition group/row`}>
+                        <tr key={p.id} className={`${colors.bg} border-b border-slate-200 hover:bg-slate-50/60 transition group/row`}>
                           {/* Project Name (Wrap-enabled inline container) */}
                           <td className={`p-5 align-top border-l-4 ${colors.border} break-words`}>
                             <div className="flex flex-col gap-1 break-words">
@@ -490,7 +490,7 @@
                                 value={p.name} 
                                 placeholder="Project Name..."
                                 onSave={(v) => updateProjectField(p.id, 'name', v)} 
-                                className={`w-full font-bold text-lg bg-transparent border-none outline-none focus:ring-0 ${colors.text} break-words whitespace-normal`} 
+                                className={`w-full font-bold text-base bg-transparent border-none outline-none focus:ring-0 ${colors.text} break-words whitespace-normal`} 
                               />
                               <div className="flex items-center gap-2 opacity-0 group-hover/row:opacity-100 transition duration-150 text-xs mt-2">
                                 <button 
@@ -516,7 +516,7 @@
                               <select 
                                 value={p.priority} 
                                 onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
-                                className={`p-1.5 rounded text-sm bg-white border border-slate-200 outline-none font-bold text-center cursor-pointer w-full max-w-[120px]`}
+                                className={`p-1 rounded text-sm bg-white border border-slate-200 outline-none font-bold text-center cursor-pointer w-full max-w-[100px] ${colors.text}`}
                               >
                                 {PRIORITIES.map(opt => (
                                   <option key={opt.level} value={opt.level}>
@@ -532,7 +532,7 @@
                             <select 
                               value={p.category || 'None'} 
                               onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
-                              className={`p-2 rounded text-base bg-white border border-slate-200 outline-none font-semibold ${colors.text} cursor-pointer w-full max-w-[130px]`}
+                              className={`p-1 rounded text-sm bg-white border border-slate-200 outline-none font-semibold ${colors.text} cursor-pointer w-full max-w-[130px]`}
                             >
                               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
@@ -544,7 +544,7 @@
                               value={p.status || ''} 
                               placeholder="..."
                               onSave={(v) => updateProjectField(p.id, 'status', v)} 
-                              className={`w-full text-base leading-relaxed p-1 ${colors.text} break-words whitespace-normal`}
+                              className={`w-full text-sm leading-relaxed p-1 ${colors.text} break-words whitespace-normal`}
                             />
                           </td>
 
