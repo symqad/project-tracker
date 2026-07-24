@@ -32,7 +32,6 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
     }
-    /* Elegant placeholder engine for custom contentEditable nodes */
     [contenteditable]:empty:before {
       content: attr(data-placeholder);
       color: #94a3b8;
@@ -69,11 +68,11 @@
     const CATEGORY_COLORS = {
       'None': { border: 'border-l-slate-900', bg: 'bg-slate-100/30', text: 'text-slate-900', label: 'text-slate-700' },
       'Personal': { border: 'border-l-blue-500', bg: 'bg-blue-50/40', text: 'text-blue-900', label: 'text-blue-600' },
-      'Career': { border: 'border-l-orange-500', bg: 'bg-orange-50/40', text: 'text-orange-900', label: 'text-orange-700' }, // Dark Orange Fixed
-      'Family': { border: 'border-l-fuchsia-500', bg: 'bg-fuchsia-50/40', text: 'text-fuchsia-900', label: 'text-fuchsia-700' }, // Magenta Fixed
+      'Career': { border: 'border-l-orange-500', bg: 'bg-orange-50/40', text: 'text-orange-900', label: 'text-orange-700' },
+      'Family': { border: 'border-l-fuchsia-500', bg: 'bg-fuchsia-50/40', text: 'text-fuchsia-900', label: 'text-fuchsia-700' },
       'Spiritual': { border: 'border-l-green-500', bg: 'bg-green-50/40', text: 'text-green-900', label: 'text-green-600' },
       'Financial': { border: 'border-l-purple-500', bg: 'bg-purple-50/40', text: 'text-purple-900', label: 'text-purple-600' },
-      'Learning': { border: 'border-l-pink-500', bg: 'bg-pink-50/40', text: 'text-pink-900', label: 'text-pink-600' }, // Pink Learning Category
+      'Learning': { border: 'border-l-pink-500', bg: 'bg-pink-50/40', text: 'text-pink-900', label: 'text-pink-600' },
       '': { border: 'border-l-slate-900', bg: 'bg-slate-100/30', text: 'text-slate-900', label: 'text-slate-700' }
     };
 
@@ -83,7 +82,35 @@
       { level: 2, label: '‼️' }
     ];
 
-    // Focus-preserving contentEditable Input: Permits natural wrapping without textarea UI weight
+    const DEMO_PROJECTS = [
+      {
+        id: 'demo-1',
+        name: 'Q3 Strategic Roadmap',
+        category: 'Career',
+        priority: 2,
+        orderIndex: 100,
+        status: 'In Execution',
+        nextSteps: [
+          { id: 'd1-1', text: 'Finalize core execution milestones', done: false, indent: 0 },
+          { id: 'd1-2', text: 'Align cross-functional leads', done: true, indent: 0 }
+        ],
+        notes: [{ id: 'dn1-1', text: 'Focus on zero-friction delivery.', done: false, indent: 0 }],
+        archived: false
+      },
+      {
+        id: 'demo-2',
+        name: 'Drip Irrigation System',
+        category: 'Personal',
+        priority: 1,
+        orderIndex: 200,
+        status: 'Planning',
+        nextSteps: [{ id: 'd2-1', text: 'Measure garden bed perimeter', done: false, indent: 0 }],
+        notes: [],
+        archived: false
+      }
+    ];
+
+    // Input component with clipboard sanitization
     const AutoSaveInput = ({ value, onSave, className, placeholder }) => {
       const elRef = useRef(null);
       const committedValue = useRef(value || '');
@@ -107,9 +134,16 @@
 
       const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
-          e.preventDefault(); // Deny multi-line linebreaks inside project headers
+          e.preventDefault();
           elRef.current.blur();
         }
+      };
+
+      // Strip formatted HTML/scripts on paste to prevent DOM tampering
+      const handlePaste = (e) => {
+        e.preventDefault();
+        const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
+        document.execCommand('insertText', false, plainText);
       };
 
       return (
@@ -119,6 +153,7 @@
           suppressContentEditableWarning
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           className={`${className} cursor-text break-words whitespace-normal outline-none focus:outline-none min-h-[1.5em] w-full`}
           data-placeholder={placeholder}
           style={{ wordBreak: 'break-word', display: 'inline-block' }}
@@ -126,7 +161,6 @@
       );
     };
 
-    // Auto-growing textarea with input protection and overflow buffers to prevent vertical clipping
     const AutoResizeTextarea = ({ value, onSave, onKeyDown, autoFocus, className, placeholder }) => {
       const textareaRef = useRef(null);
       const [val, setVal] = useState(value || '');
@@ -153,13 +187,25 @@
           textareaRef.current.setSelectionRange(len, len);
         }
       }, [autoFocus]);
-      
+
+      const handlePaste = (e) => {
+        e.preventDefault();
+        const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
+        const target = e.target;
+        const start = target.selectionStart;
+        const end = target.selectionEnd;
+        const currentVal = target.value;
+        const newVal = currentVal.substring(0, start) + plainText + currentVal.substring(end);
+        setVal(newVal);
+      };
+
       return (
         <textarea 
           ref={textareaRef} 
           value={val} 
           placeholder={placeholder}
           onChange={(e) => setVal(e.target.value)}
+          onPaste={handlePaste}
           onFocus={() => { isFocused.current = true; }}
           onBlur={() => { 
             isFocused.current = false; 
@@ -194,41 +240,43 @@
     function App() {
       const [user, setUser] = useState(null);
       const [loading, setLoading] = useState(true);
+      const [isDemoMode, setIsDemoMode] = useState(false);
       const [projects, setProjects] = useState([]);
       const [focusId, setFocusId] = useState(null);
       const [showArchived, setShowArchived] = useState(false);
       
-      // Sorting & Filtering State
       const [priorityFilter, setPriorityFilter] = useState('all');
-      const [sortBy, setSortBy] = useState('manual'); // 'manual', 'priority-desc', 'priority-asc'
+      const [sortBy, setSortBy] = useState('manual');
 
       useEffect(() => {
         return auth.onAuthStateChanged((u) => {
           setUser(u);
+          if (u) setIsDemoMode(false);
           setLoading(false);
         });
       }, []);
 
       useEffect(() => {
-        if (!user) return;
+        if (!user || isDemoMode) return;
+        
+        // Strict boundary: Document queries are always scoped directly to current authenticated user UID
         return db.collection('users').doc(user.uid).collection('projects')
           .onSnapshot(snapshot => {
             let data = snapshot.docs.map(doc => {
               const raw = doc.data();
               return {
                 id: doc.id,
-                name: raw.name || '',
-                category: raw.category || 'None',
+                name: typeof raw.name === 'string' ? raw.name : '',
+                category: typeof raw.category === 'string' ? raw.category : 'None',
                 priority: typeof raw.priority === 'number' ? raw.priority : 0,
                 orderIndex: typeof raw.orderIndex === 'number' ? raw.orderIndex : 0,
-                status: raw.status || '',
+                status: typeof raw.status === 'string' ? raw.status : '',
                 nextSteps: Array.isArray(raw.nextSteps) ? raw.nextSteps : [],
                 notes: Array.isArray(raw.notes) ? raw.notes : [],
                 archived: !!raw.archived
               };
             });
 
-            // Self-Healing Index Logic: Fix missing or zero index sequences immediately
             const needsIndexing = data.some(p => p.orderIndex === 0);
             if (needsIndexing && data.length > 0) {
               const batch = db.batch();
@@ -237,25 +285,38 @@
                 batch.update(docRef, { orderIndex: (idx + 1) * 100 });
                 p.orderIndex = (idx + 1) * 100;
               });
-              batch.commit().catch(err => console.error("Self-healing index failed:", err));
+              batch.commit().catch(err => console.error("Self-healing index failed:", err.message));
             }
 
             setProjects(data);
-          }, err => console.error("Database sync error:", err));
-      }, [user]);
+          }, err => {
+            console.error("Database access error:", err.message);
+          });
+      }, [user, isDemoMode]);
 
-      const getProjectDoc = (id) => db.collection('users').doc(user.uid).collection('projects').doc(String(id));
+      const startDemoMode = () => {
+        setIsDemoMode(true);
+        setProjects(DEMO_PROJECTS);
+      };
+
+      const getProjectDoc = (id) => {
+        if (!user) throw new Error("Unauthenticated user session.");
+        return db.collection('users').doc(user.uid).collection('projects').doc(String(id));
+      };
 
       const updateProjectField = (id, field, val) => {
+        if (isDemoMode) {
+          setProjects(prev => prev.map(p => p.id === id ? { ...p, [field]: val } : p));
+          return;
+        }
         if (!user) return;
         getProjectDoc(id).set({ [field]: val }, { merge: true })
-          .catch(err => console.error("Update field failed:", err));
+          .catch(err => console.error("Update field failed:", err.message));
       };
 
       const createProject = () => {
-        if (!user) return;
         const maxOrder = projects.length > 0 ? Math.max(...projects.map(p => p.orderIndex || 0)) : 0;
-        db.collection('users').doc(user.uid).collection('projects').add({
+        const newProj = {
           name: '',
           category: 'None',
           priority: 0,
@@ -264,30 +325,50 @@
           nextSteps: [],
           notes: [],
           archived: false
-        });
+        };
+
+        if (isDemoMode) {
+          setProjects(prev => [...prev, { ...newProj, id: `demo-${Date.now()}` }]);
+          return;
+        }
+
+        if (!user) return;
+        db.collection('users').doc(user.uid).collection('projects').add(newProj)
+          .catch(err => console.error("Create project failed:", err.message));
       };
 
       const deleteProject = (id) => {
         if (!confirm("Are you sure you want to permanently delete this project?")) return;
-        getProjectDoc(id).delete().catch(err => console.error("Deletion failed:", err));
+        if (isDemoMode) {
+          setProjects(prev => prev.filter(p => p.id !== id));
+          return;
+        }
+        if (!user) return;
+        getProjectDoc(id).delete().catch(err => console.error("Deletion failed:", err.message));
       };
 
-      // Manual Reordering Controller
       const moveProject = (currentIndex, direction) => {
-        if (!user) return;
         const targetIndex = currentIndex + direction;
         if (targetIndex < 0 || targetIndex >= sortedMasterList.length) return;
 
         const currentProject = sortedMasterList[currentIndex];
         const targetProject = sortedMasterList[targetIndex];
-
         const tempIndex = currentProject.orderIndex;
-        
+
+        if (isDemoMode) {
+          setProjects(prev => prev.map(p => {
+            if (p.id === currentProject.id) return { ...p, orderIndex: targetProject.orderIndex };
+            if (p.id === targetProject.id) return { ...p, orderIndex: tempIndex };
+            return p;
+          }));
+          return;
+        }
+
+        if (!user) return;
         const batch = db.batch();
         batch.update(getProjectDoc(currentProject.id), { orderIndex: targetProject.orderIndex });
         batch.update(getProjectDoc(targetProject.id), { orderIndex: tempIndex });
-        
-        batch.commit().catch(err => console.error("Reorder failed:", err));
+        batch.commit().catch(err => console.error("Reorder failed:", err.message));
       };
 
       const handleListKeyDown = (e, project, field, item, idx, currentText) => {
@@ -373,31 +454,105 @@
       };
 
       if (loading) return <div className="h-screen flex items-center justify-center text-slate-500 font-medium">Connecting...</div>;
-      if (!user) return (
-        <div className="h-screen flex flex-col items-center justify-center gap-4 bg-slate-100 p-4">
-          <div className="bg-white p-8 rounded-xl shadow-md flex flex-col items-center gap-6 max-w-sm w-full text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-800">Master Project Tracker</h1>
-            <p className="text-slate-500 text-sm">Please sign in to access your secure database sandbox.</p>
-            <button 
-              onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())} 
-              className="w-full px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold shadow-md hover:shadow-lg transition flex items-center justify-center gap-2"
-            >
-              Sign in with Google
-            </button>
-          </div>
-        </div>
-      );
 
-      // 1. Establish the clean master sorting hierarchy (independent of filters)
+      if (!user && !isDemoMode) {
+        return (
+          <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col lg:flex-row font-sans">
+            <div className="flex-1 lg:flex-[1.2] p-6 sm:p-10 lg:p-14 flex flex-col justify-center items-start">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-semibold mb-6">
+                <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+                Focus-First Workspace
+              </div>
+              
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight mb-4 text-white">
+                Zero-Friction Project Tracking
+              </h1>
+              
+              <p className="text-slate-400 text-base sm:text-lg max-w-xl leading-relaxed mb-8">
+                Cut through the noise of bloated enterprise tools. See what’s next, sequence your priorities, and keep momentum—without administrative clutter.
+              </p>
+
+              <div className="w-full max-w-xl bg-slate-800/90 border border-slate-700/80 rounded-xl p-4 shadow-2xl">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-700/60 mb-4">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                  <span className="text-xs font-mono text-slate-400 ml-2">Active Board Preview</span>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+                    <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">WHAT'S NEXT</div>
+                    <div className="bg-slate-800/90 p-2.5 rounded border border-slate-700/70 mb-2">
+                      <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 mb-1 border border-orange-500/30">CAREER</span>
+                      <p className="text-xs font-semibold text-slate-200">Finalize Q3 Strategic Roadmap</p>
+                    </div>
+                    <div className="bg-slate-800/90 p-2.5 rounded border border-slate-700/70">
+                      <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 mb-1 border border-blue-500/30">PERSONAL</span>
+                      <p className="text-xs font-semibold text-slate-200">Garden drip irrigation setup</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+                    <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">WHAT'S DONE</div>
+                    <div className="bg-slate-800/60 p-2.5 rounded border border-slate-700/40 opacity-60">
+                      <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 mb-1 border border-purple-500/30">LEARNING</span>
+                      <p className="text-xs font-semibold text-slate-400 line-through">Deploy Firebase security rules</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full lg:w-[420px] bg-slate-800/60 border-t lg:border-t-0 lg:border-l border-slate-700/60 p-6 sm:p-10 flex items-center justify-center">
+              <div className="w-full max-w-sm text-center">
+                <h2 className="text-2xl font-bold text-white mb-2">Get Started</h2>
+                <p className="text-slate-400 text-sm mb-6">
+                  Access your private workspace or explore the live demo instantly.
+                </p>
+
+                <button 
+                  onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}
+                  className="w-full py-3 px-4 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-lg shadow transition duration-150 flex items-center justify-center gap-3 text-sm"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  Continue with Google
+                </button>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-700"></div></div>
+                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-slate-800 px-2 text-slate-500 font-semibold">OR</span></div>
+                </div>
+
+                <button 
+                  onClick={startDemoMode}
+                  className="w-full py-3 px-4 bg-transparent hover:bg-slate-700/50 text-sky-400 font-bold rounded-lg border border-sky-500/40 transition duration-150 text-sm"
+                >
+                  View Live Demo
+                </button>
+
+                <div className="mt-6 text-xs text-slate-500">
+                  🔒 Private & Secure. Authenticated directly with Google Firebase.
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       const sortedMasterList = [...projects]
         .filter(p => p.archived === showArchived)
         .sort((a, b) => {
           if (sortBy === 'priority-desc') return b.priority - a.priority;
           if (sortBy === 'priority-asc') return a.priority - b.priority;
-          return a.orderIndex - b.orderIndex; // Default manual hierarchy
+          return a.orderIndex - b.orderIndex;
         });
 
-      // 2. Apply filtering conditions cleanly on top of sorted states
       const displayedProjects = sortedMasterList.filter(p => {
         if (priorityFilter !== 'all') {
           return p.priority === parseInt(priorityFilter, 10);
@@ -409,17 +564,27 @@
 
       return (
         <ErrorBoundary>
+          {isDemoMode && (
+            <div className="bg-sky-600 text-white text-xs font-semibold px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 shadow">
+              <span>⚡ You are viewing an interactive Live Demo. Changes are temporary.</span>
+              <button 
+                onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}
+                className="bg-white text-sky-900 px-3 py-1 rounded font-bold hover:bg-sky-50 transition"
+              >
+                Sign In with Google to Save
+              </button>
+            </div>
+          )}
+
           <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
-            {/* Header Control Panel */}
             <div className="max-w-[1400px] mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                 <h1 className="text-2xl font-extrabold text-slate-850 tracking-tight">My Workspace</h1>
                 <div className="text-xs text-slate-500 bg-slate-200/80 px-2.5 py-1 rounded-full font-mono self-start sm:self-auto truncate max-w-[280px]">
-                  {user.email}
+                  {isDemoMode ? 'demo@sandbox.local' : user?.email}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 items-center">
-                {/* Priority Filter */}
                 <div className="flex items-center bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700">
                   <span className="mr-2 text-slate-400">Filter:</span>
                   <select 
@@ -434,7 +599,6 @@
                   </select>
                 </div>
 
-                {/* Sort Order Selector */}
                 <div className="flex items-center bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700">
                   <span className="mr-2 text-slate-400">Sort:</span>
                   <select 
@@ -454,16 +618,25 @@
                 >
                   {showArchived ? "View Active Projects" : "View Archived Projects"}
                 </button>
-                <button 
-                  onClick={() => auth.signOut()} 
-                  className="px-4 py-2 text-xs bg-white border border-slate-200 text-slate-500 rounded-lg font-semibold hover:text-red-600 hover:border-red-200 transition duration-150"
-                >
-                  Sign Out
-                </button>
+
+                {isDemoMode ? (
+                  <button 
+                    onClick={() => setIsDemoMode(false)} 
+                    className="px-4 py-2 text-xs bg-white border border-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition duration-150"
+                  >
+                    Exit Demo
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => auth.signOut()} 
+                    className="px-4 py-2 text-xs bg-white border border-slate-200 text-slate-500 rounded-lg font-semibold hover:text-red-600 hover:border-red-200 transition duration-150"
+                  >
+                    Sign Out
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Core Workspace Table */}
             <div className="max-w-[1400px] mx-auto bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="overflow-x-auto w-full custom-scrollbar">
                 <table className="w-full text-left border-collapse min-w-[1250px] table-fixed">
@@ -483,7 +656,6 @@
                       const colors = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
                       return (
                         <tr key={p.id} className={`${colors.bg} border-b border-slate-200 hover:bg-slate-50/60 transition group/row`}>
-                          {/* Project Name (Wrap-enabled inline container) */}
                           <td className={`p-5 align-top border-l-4 ${colors.border} break-words`}>
                             <div className="flex flex-col gap-1 break-words">
                               <AutoSaveInput 
@@ -510,7 +682,6 @@
                             </div>
                           </td>
 
-                          {/* Dynamic Priority Toggle Cell */}
                           <td className="p-5 align-top">
                             <div className="flex flex-col gap-1">
                               <select 
@@ -527,7 +698,6 @@
                             </div>
                           </td>
 
-                          {/* Category Selector */}
                           <td className="p-5 align-top">
                             <select 
                               value={p.category || 'None'} 
@@ -538,7 +708,6 @@
                             </select>
                           </td>
 
-                          {/* Plain Status Field (Wraps completely) */}
                           <td className="p-5 align-top break-words">
                             <AutoResizeTextarea 
                               value={p.status || ''} 
@@ -548,17 +717,14 @@
                             />
                           </td>
 
-                          {/* Next Steps List */}
                           <td className="p-5 align-top break-words">
                             {renderList(p, 'nextSteps', colors)}
                           </td>
 
-                          {/* Notes List */}
                           <td className="p-5 align-top break-words">
                             {renderList(p, 'notes', colors)}
                           </td>
 
-                          {/* Manual Reordering Controls */}
                           <td className="p-4 align-top text-center">
                             {isManualOrderingActive ? (
                               <div className="flex items-center justify-center gap-1.5 mt-1">
