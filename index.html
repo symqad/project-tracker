@@ -40,7 +40,7 @@
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-900 antialiased font-sans">
+<body class="bg-slate-900 text-slate-100 antialiased font-sans">
   <div id="root"></div>
 
   <script type="text/babel" data-type="module">
@@ -66,14 +66,34 @@
     const CATEGORIES = ['None', 'Personal', 'Career', 'Family', 'Spiritual', 'Financial', 'Learning'];
 
     const CATEGORY_COLORS = {
-      'None': { border: 'border-l-slate-900', bg: 'bg-slate-100/30', text: 'text-slate-900', label: 'text-slate-700' },
-      'Personal': { border: 'border-l-blue-500', bg: 'bg-blue-50/40', text: 'text-blue-900', label: 'text-blue-600' },
-      'Career': { border: 'border-l-orange-500', bg: 'bg-orange-50/40', text: 'text-orange-900', label: 'text-orange-700' },
-      'Family': { border: 'border-l-fuchsia-500', bg: 'bg-fuchsia-50/40', text: 'text-fuchsia-900', label: 'text-fuchsia-700' },
-      'Spiritual': { border: 'border-l-green-500', bg: 'bg-green-50/40', text: 'text-green-900', label: 'text-green-600' },
-      'Financial': { border: 'border-l-purple-500', bg: 'bg-purple-50/40', text: 'text-purple-900', label: 'text-purple-600' },
-      'Learning': { border: 'border-l-pink-500', bg: 'bg-pink-50/40', text: 'text-pink-900', label: 'text-pink-600' },
-      '': { border: 'border-l-slate-900', bg: 'bg-slate-100/30', text: 'text-slate-900', label: 'text-slate-700' }
+      'None': { 
+        light: { border: 'border-l-slate-900', bg: 'bg-slate-100/40', text: 'text-slate-900' },
+        dark: { border: 'border-l-slate-400', bg: 'bg-slate-900/80', text: 'text-slate-100' }
+      },
+      'Personal': { 
+        light: { border: 'border-l-blue-500', bg: 'bg-blue-50/40', text: 'text-blue-900' },
+        dark: { border: 'border-l-blue-400', bg: 'bg-blue-950/30', text: 'text-blue-200' }
+      },
+      'Career': { 
+        light: { border: 'border-l-orange-500', bg: 'bg-orange-50/40', text: 'text-orange-900' },
+        dark: { border: 'border-l-orange-400', bg: 'bg-orange-950/30', text: 'text-orange-200' }
+      },
+      'Family': { 
+        light: { border: 'border-l-fuchsia-500', bg: 'bg-fuchsia-50/40', text: 'text-fuchsia-900' },
+        dark: { border: 'border-l-fuchsia-400', bg: 'bg-fuchsia-950/30', text: 'text-fuchsia-200' }
+      },
+      'Spiritual': { 
+        light: { border: 'border-l-green-500', bg: 'bg-green-50/40', text: 'text-green-900' },
+        dark: { border: 'border-l-green-400', bg: 'bg-green-950/30', text: 'text-green-200' }
+      },
+      'Financial': { 
+        light: { border: 'border-l-purple-500', bg: 'bg-purple-50/40', text: 'text-purple-900' },
+        dark: { border: 'border-l-purple-400', bg: 'bg-purple-950/30', text: 'text-purple-200' }
+      },
+      'Learning': { 
+        light: { border: 'border-l-pink-500', bg: 'bg-pink-50/40', text: 'text-pink-900' },
+        dark: { border: 'border-l-pink-400', bg: 'bg-pink-950/30', text: 'text-pink-200' }
+      }
     };
 
     const PRIORITIES = [
@@ -89,22 +109,22 @@
         category: 'Career',
         priority: 2,
         orderIndex: 100,
-        status: 'In Execution',
+        status: 'Aligned cross-functional leads and locked budget constraints.',
         nextSteps: [
           { id: 'd1-1', text: 'Finalize core execution milestones', done: false, indent: 0 },
-          { id: 'd1-2', text: 'Align cross-functional leads', done: true, indent: 0 }
+          { id: 'd1-2', text: 'Publish team resource matrix', done: true, indent: 0 }
         ],
-        notes: [{ id: 'dn1-1', text: 'Focus on zero-friction delivery.', done: false, indent: 0 }],
+        notes: [{ id: 'dn1-1', text: 'Keep delivery zero-friction.', done: false, indent: 0 }],
         archived: false
       },
       {
         id: 'demo-2',
-        name: 'Drip Irrigation System',
+        name: 'Garden Drip Irrigation',
         category: 'Personal',
         priority: 1,
         orderIndex: 200,
-        status: 'Planning',
-        nextSteps: [{ id: 'd2-1', text: 'Measure garden bed perimeter', done: false, indent: 0 }],
+        status: 'Perimeter and pressure ratings verified.',
+        nextSteps: [{ id: 'd2-1', text: 'Source 1/2 inch manifold fittings', done: false, indent: 0 }],
         notes: [],
         archived: false
       }
@@ -226,8 +246,8 @@
         if (this.state.hasError) {
           return (
             <div className="p-8 text-center">
-              <h2 className="text-lg font-bold text-red-600">A presentation error occurred in the workspace.</h2>
-              <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-amber-500 text-white rounded">Reload Dashboard</button>
+              <h2 className="text-lg font-bold text-red-500">A presentation error occurred in the workspace.</h2>
+              <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-amber-500 text-white rounded font-bold">Reload Workspace</button>
             </div>
           );
         }
@@ -243,8 +263,25 @@
       const [focusId, setFocusId] = useState(null);
       const [showArchived, setShowArchived] = useState(false);
       
+      const [isDarkMode, setIsDarkMode] = useState(() => {
+        return localStorage.getItem('theme') === 'dark' || true;
+      });
+
       const [priorityFilter, setPriorityFilter] = useState('all');
       const [sortBy, setSortBy] = useState('manual');
+
+      // Check URL search params for direct demo launch
+      useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('demo') === 'true') {
+          setIsDemoMode(true);
+          setProjects(DEMO_PROJECTS);
+        }
+      }, []);
+
+      useEffect(() => {
+        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+      }, [isDarkMode]);
 
       useEffect(() => {
         return auth.onAuthStateChanged((u) => {
@@ -294,6 +331,22 @@
       const startDemoMode = () => {
         setIsDemoMode(true);
         setProjects(DEMO_PROJECTS);
+      };
+
+      const launchDemoInNewTab = () => {
+        const demoUrl = window.location.origin + window.location.pathname + '?demo=true';
+        const openedWindow = window.open(demoUrl, '_blank');
+        // Fallback if popup blocker intercepted new window
+        if (!openedWindow || openedWindow.closed || typeof openedWindow.closed === 'undefined') {
+          startDemoMode();
+        }
+      };
+
+      const exitDemoMode = () => {
+        setIsDemoMode(false);
+        if (window.location.search.includes('demo=true')) {
+          window.history.pushState({}, document.title, window.location.pathname);
+        }
       };
 
       const getProjectDoc = (id) => {
@@ -407,7 +460,7 @@
               return (
                 <div 
                   key={item.id} 
-                  className="flex items-start gap-2 group transition-all duration-150 break-words border-b border-slate-200/40 pb-1.5 last:border-0" 
+                  className={`flex items-start gap-2 group transition-all duration-150 break-words border-b pb-1.5 last:border-0 ${isDarkMode ? 'border-slate-800/80' : 'border-slate-200/50'}`} 
                   style={{ marginLeft: `${indentLevel * 16}px` }}
                 >
                   <input 
@@ -418,7 +471,7 @@
                       newList[idx] = { ...newList[idx], done: e.target.checked };
                       updateProjectField(project.id, field, newList);
                     }} 
-                    className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer flex-shrink-0"
+                    className="mt-1 h-4 w-4 rounded border-slate-400 text-amber-500 focus:ring-amber-500 cursor-pointer flex-shrink-0"
                   />
                   <AutoResizeTextarea
                     value={item.text || ''}
@@ -430,7 +483,7 @@
                       updateProjectField(project.id, field, newList);
                     }}
                     onKeyDown={(e, textVal) => handleListKeyDown(e, project, field, item, idx, textVal)}
-                    className={`flex-1 bg-transparent border-none focus:ring-0 text-sm py-0 px-1 leading-relaxed outline-none break-words ${colors.text} ${item.done ? 'line-through opacity-50' : ''}`}
+                    className={`flex-1 bg-transparent border-none focus:ring-0 text-sm py-0 px-1 leading-relaxed outline-none break-words ${colors.text} ${item.done ? 'line-through opacity-40' : ''}`}
                   />
                 </div>
               );
@@ -442,7 +495,7 @@
                 setFocusId(newId);
                 updateProjectField(project.id, field, newList);
               }} 
-              className="text-xs text-slate-400 hover:text-amber-600 transition flex items-center gap-1 mt-1 pl-1"
+              className="text-xs text-amber-500 hover:text-amber-400 transition flex items-center gap-1 mt-1 pl-1 font-semibold"
             >
               + Add item
             </button>
@@ -450,12 +503,12 @@
         );
       };
 
-      if (loading) return <div className="h-screen flex items-center justify-center text-slate-500 font-medium">Connecting...</div>;
+      if (loading) return <div className="h-screen flex items-center justify-center text-slate-400 font-medium">Connecting Workspace...</div>;
 
       if (!user && !isDemoMode) {
         return (
           <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col lg:flex-row font-sans">
-            {/* Main Hero Content Area - Expanded for Balanced Desktop Layout */}
+            {/* Main Hero Content Area */}
             <div className="flex-1 p-8 sm:p-12 lg:p-16 flex flex-col justify-between items-start max-w-7xl mx-auto w-full">
               
               <div className="w-full">
@@ -472,65 +525,73 @@
                   Built on a <strong>pure simplistic</strong> workflow. Easily <strong>track active projects</strong>, instantly review <strong>what you have done and what's next</strong>, and <strong>avoid cognitive overwhelm</strong> without software clutter.
                 </p>
 
-                {/* Benefits Matrix */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10 w-full max-w-5xl">
-                  <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-                    <div className="text-amber-400 text-lg mb-1">✨</div>
-                    <div className="font-bold text-sm text-slate-100 mb-1">Pure Simplistic</div>
-                    <div className="text-xs text-slate-400 leading-normal">Zero configuration or admin bloat. Focus purely on execution.</div>
+                {/* Benefits Matrix - Enhanced Font Sizes */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10 w-full max-w-5xl">
+                  <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
+                    <div className="text-2xl mb-2">✨</div>
+                    <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Pure Simplistic</div>
+                    <div className="text-sm text-slate-300 leading-relaxed">Zero configuration or admin bloat. Focus purely on execution.</div>
                   </div>
 
-                  <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-                    <div className="text-sky-400 text-lg mb-1">🎯</div>
-                    <div className="font-bold text-sm text-slate-100 mb-1">Track Active Projects</div>
-                    <div className="text-xs text-slate-400 leading-normal">A single high-density view for all active streams.</div>
+                  <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
+                    <div className="text-2xl mb-2">🎯</div>
+                    <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Track Active Projects</div>
+                    <div className="text-sm text-slate-300 leading-relaxed">A single high-density view for all active streams.</div>
                   </div>
 
-                  <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-                    <div className="text-emerald-400 text-lg mb-1">📋</div>
-                    <div className="font-bold text-sm text-slate-100 mb-1">Done & What's Next</div>
-                    <div className="text-xs text-slate-400 leading-normal">Immediate clarity on completed milestones and next steps.</div>
+                  <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
+                    <div className="text-2xl mb-2">📋</div>
+                    <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Done & What's Next</div>
+                    <div className="text-sm text-slate-300 leading-relaxed">Immediate clarity on completed milestones and next steps.</div>
                   </div>
 
-                  <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-                    <div className="text-purple-400 text-lg mb-1">🔒</div>
-                    <div className="font-bold text-sm text-slate-100 mb-1">Keep It Private</div>
-                    <div className="text-xs text-slate-400 leading-normal">Avoid cognitive overwhelm in a isolated secure workspace.</div>
+                  <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
+                    <div className="text-2xl mb-2">🔒</div>
+                    <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Keep It Private</div>
+                    <div className="text-sm text-slate-300 leading-relaxed">Avoid cognitive overwhelm in an isolated secure workspace.</div>
                   </div>
                 </div>
 
-                {/* CSS UI Mockup Box - Expanded Width */}
-                <div className="w-full max-w-4xl bg-slate-800/90 border border-slate-700/80 rounded-xl p-5 shadow-2xl">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-700/60 mb-4">
+                {/* UI Mockup - Reflecting Actual Board Layout */}
+                <div className="w-full max-w-4xl bg-slate-800/90 border border-slate-700 rounded-xl p-5 shadow-2xl">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-700 mb-4">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                      <span className="text-xs font-mono text-slate-400 ml-2">Active Board Preview</span>
+                      <span className="text-xs font-mono text-slate-400 ml-2">Real Board Preview</span>
                     </div>
-                    <span className="text-xs text-slate-400 font-mono">Live Demo Stream</span>
+                    <span className="text-xs text-amber-400 font-mono">Live Table View</span>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-slate-900/80 p-4 rounded-lg border border-slate-800">
-                      <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-3">WHAT'S NEXT</div>
-                      <div className="bg-slate-800/90 p-3 rounded border border-slate-700/70 mb-2.5">
-                        <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 mb-1 border border-orange-500/30">CAREER</span>
-                        <p className="text-xs font-semibold text-slate-200">Finalize Q3 Strategic Roadmap</p>
-                      </div>
-                      <div className="bg-slate-800/90 p-3 rounded border border-slate-700/70">
-                        <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 mb-1 border border-blue-500/30">PERSONAL</span>
-                        <p className="text-xs font-semibold text-slate-200">Garden drip irrigation setup</p>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-900/80 p-4 rounded-lg border border-slate-800">
-                      <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-3">WHAT'S DONE</div>
-                      <div className="bg-slate-800/60 p-3 rounded border border-slate-700/40 opacity-70">
-                        <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 mb-1 border border-purple-500/30">LEARNING</span>
-                        <p className="text-xs font-semibold text-slate-400 line-through">Deploy Firebase security rules</p>
-                      </div>
-                    </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-amber-400 text-slate-950 font-black uppercase tracking-wider text-[11px]">
+                          <th className="p-2.5 rounded-l">PROJECT</th>
+                          <th className="p-2.5">PRIORITY</th>
+                          <th className="p-2.5">CATEGORY</th>
+                          <th className="p-2.5">WHAT'S DONE</th>
+                          <th className="p-2.5 rounded-r">PICK UP FROM</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700/60 text-slate-300">
+                        <tr>
+                          <td className="p-3 font-bold text-slate-100">Q3 Strategic Roadmap</td>
+                          <td className="p-3">‼️</td>
+                          <td className="p-3"><span className="px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30">Career</span></td>
+                          <td className="p-3 text-slate-400">Aligned cross-functional leads and locked budget constraints.</td>
+                          <td className="p-3 font-medium text-emerald-400">• Finalize core execution milestones</td>
+                        </tr>
+                        <tr>
+                          <td className="p-3 font-bold text-slate-100">Garden Drip Irrigation</td>
+                          <td className="p-3">❗</td>
+                          <td className="p-3"><span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Personal</span></td>
+                          <td className="p-3 text-slate-400">Perimeter and pressure ratings verified.</td>
+                          <td className="p-3 font-medium text-emerald-400">• Source 1/2 inch manifold fittings</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -544,7 +605,6 @@
             <div className="w-full lg:w-[440px] bg-slate-800/70 border-t lg:border-t-0 lg:border-l border-slate-700/60 p-8 sm:p-12 flex items-center justify-center">
               <div className="w-full max-w-sm text-center">
                 
-                {/* Banner Header */}
                 <div className="inline-block px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-xs font-extrabold uppercase tracking-wide mb-3">
                   100% Free Forever
                 </div>
@@ -576,10 +636,10 @@
                 </div>
 
                 <button 
-                  onClick={startDemoMode}
+                  onClick={launchDemoInNewTab}
                   className="w-full py-3 px-4 bg-transparent hover:bg-slate-700/50 text-sky-400 font-bold rounded-lg border border-sky-500/40 transition duration-150 text-sm"
                 >
-                  View Live Demo
+                  View Live Demo (New Tab ↗)
                 </button>
 
                 <div className="mt-8 text-xs text-slate-400 bg-slate-900/60 p-3 rounded-lg border border-slate-700/50">
@@ -612,70 +672,88 @@
         <ErrorBoundary>
           {isDemoMode && (
             <div className="bg-sky-600 text-white text-xs font-semibold px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 shadow">
-              <span>⚡ You are viewing an interactive Live Demo. Changes are temporary.</span>
-              <button 
-                onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}
-                className="bg-white text-sky-900 px-3 py-1 rounded font-bold hover:bg-sky-50 transition"
-              >
-                Sign In with Google to Save
-              </button>
+              <span>⚡ You are viewing an interactive Live Demo sandbox.</span>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={exitDemoMode}
+                  className="bg-sky-800 text-white px-3 py-1 rounded font-bold hover:bg-sky-900 transition"
+                >
+                  ← Exit Demo / Go Home
+                </button>
+                <button 
+                  onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}
+                  className="bg-white text-sky-950 px-3 py-1 rounded font-bold hover:bg-sky-50 transition"
+                >
+                  Sign In with Google
+                </button>
+              </div>
             </div>
           )}
 
-          <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
+          <div className={`p-4 md:p-6 min-h-screen transition-colors duration-200 ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
             <div className="max-w-[1400px] mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <h1 className="text-2xl font-extrabold text-slate-850 tracking-tight">My Workspace</h1>
-                <div className="text-xs text-slate-500 bg-slate-200/80 px-2.5 py-1 rounded-full font-mono self-start sm:self-auto truncate max-w-[280px]">
+                <h1 className="text-2xl font-extrabold tracking-tight">My Workspace</h1>
+                <div className={`text-xs px-2.5 py-1 rounded-full font-mono self-start sm:self-auto truncate max-w-[280px] ${isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'}`}>
                   {isDemoMode ? 'demo@sandbox.local' : user?.email}
                 </div>
               </div>
+
               <div className="flex flex-wrap gap-2 items-center">
-                <div className="flex items-center bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700">
+                {/* Dark Mode Toggle */}
+                <button 
+                  onClick={() => setIsDarkMode(!isDarkMode)} 
+                  className={`px-3 py-1.5 text-xs rounded-lg font-bold border transition ${isDarkMode ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                  title="Toggle Light / Dark Mode"
+                >
+                  {isDarkMode ? '☀️ Light' : '🌙 Dark'}
+                </button>
+
+                <div className={`flex items-center border rounded-lg px-2.5 py-1.5 text-xs font-semibold ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-700'}`}>
                   <span className="mr-2 text-slate-400">Filter:</span>
                   <select 
                     value={priorityFilter} 
                     onChange={(e) => setPriorityFilter(e.target.value)} 
-                    className="bg-transparent border-none p-0 pr-6 text-xs font-bold cursor-pointer"
+                    className="bg-transparent border-none p-0 pr-6 text-xs font-bold cursor-pointer outline-none"
                   >
-                    <option value="all">All Priorities</option>
-                    <option value="2">‼️ Escalation</option>
-                    <option value="1">❗ Priority</option>
-                    <option value="0">Normal</option>
+                    <option value="all" className={isDarkMode ? 'bg-slate-900 text-white' : ''}>All Priorities</option>
+                    <option value="2" className={isDarkMode ? 'bg-slate-900 text-white' : ''}>‼️ Escalation</option>
+                    <option value="1" className={isDarkMode ? 'bg-slate-900 text-white' : ''}>❗ Priority</option>
+                    <option value="0" className={isDarkMode ? 'bg-slate-900 text-white' : ''}>Normal</option>
                   </select>
                 </div>
 
-                <div className="flex items-center bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700">
+                <div className={`flex items-center border rounded-lg px-2.5 py-1.5 text-xs font-semibold ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-700'}`}>
                   <span className="mr-2 text-slate-400">Sort:</span>
                   <select 
                     value={sortBy} 
                     onChange={(e) => setSortBy(e.target.value)} 
-                    className="bg-transparent border-none p-0 pr-6 text-xs font-bold cursor-pointer"
+                    className="bg-transparent border-none p-0 pr-6 text-xs font-bold cursor-pointer outline-none"
                   >
-                    <option value="manual">Manual Order</option>
-                    <option value="priority-desc">Priority: High to Low</option>
-                    <option value="priority-asc">Priority: Low to High</option>
+                    <option value="manual" className={isDarkMode ? 'bg-slate-900 text-white' : ''}>Manual Order</option>
+                    <option value="priority-desc" className={isDarkMode ? 'bg-slate-900 text-white' : ''}>Priority: High to Low</option>
+                    <option value="priority-asc" className={isDarkMode ? 'bg-slate-900 text-white' : ''}>Priority: Low to High</option>
                   </select>
                 </div>
 
                 <button 
                   onClick={() => setShowArchived(!showArchived)} 
-                  className={`px-4 py-2 text-xs rounded-lg font-bold border transition duration-150 ${!showArchived ? 'bg-white border-slate-200 text-slate-755 hover:bg-slate-50' : 'bg-amber-500 border-amber-600 text-white hover:bg-amber-600'}`}
+                  className={`px-4 py-2 text-xs rounded-lg font-bold border transition duration-150 ${!showArchived ? (isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50') : 'bg-amber-500 border-amber-600 text-slate-950 font-black hover:bg-amber-600'}`}
                 >
                   {showArchived ? "View Active Projects" : "View Archived Projects"}
                 </button>
 
                 {isDemoMode ? (
                   <button 
-                    onClick={() => setIsDemoMode(false)} 
-                    className="px-4 py-2 text-xs bg-white border border-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition duration-150"
+                    onClick={exitDemoMode} 
+                    className={`px-4 py-2 text-xs border rounded-lg font-semibold transition duration-150 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
                   >
                     Exit Demo
                   </button>
                 ) : (
                   <button 
                     onClick={() => auth.signOut()} 
-                    className="px-4 py-2 text-xs bg-white border border-slate-200 text-slate-500 rounded-lg font-semibold hover:text-red-600 hover:border-red-200 transition duration-150"
+                    className={`px-4 py-2 text-xs border rounded-lg font-semibold transition duration-150 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-red-400 hover:border-red-900' : 'bg-white border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-200'}`}
                   >
                     Sign Out
                   </button>
@@ -683,25 +761,26 @@
               </div>
             </div>
 
-            <div className="max-w-[1400px] mx-auto bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className={`max-w-[1400px] mx-auto rounded-xl border shadow-sm overflow-hidden ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
               <div className="overflow-x-auto w-full custom-scrollbar">
                 <table className="w-full text-left border-collapse min-w-[1250px] table-fixed">
-                  <thead className="bg-amber-400 text-amber-955 text-sm uppercase tracking-wider font-extrabold">
+                  <thead className={isDarkMode ? 'bg-amber-500 text-slate-950 text-sm uppercase tracking-wider font-extrabold' : 'bg-amber-400 text-amber-955 text-sm uppercase tracking-wider font-extrabold'}>
                     <tr>
                       <th className="p-5 w-[16%]">Project</th>
                       <th className="p-5 w-[7%]">Priority</th>
                       <th className="p-5 w-[10%]">Category</th>
-                      <th className="p-5 w-[15%]">Status</th>
-                      <th className="p-5 w-[22%]">Next Steps</th>
-                      <th className="p-5 w-[25%]">Notes</th>
+                      <th className="p-5 w-[18%]">What's Done</th>
+                      <th className="p-5 w-[22%]">Pick Up From</th>
+                      <th className="p-5 w-[22%]">Notes</th>
                       <th className="p-5 w-[5%] text-center">Order</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-slate-200'}`}>
                     {displayedProjects.map((p, index) => {
-                      const colors = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
+                      const colorScheme = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
+                      const colors = isDarkMode ? colorScheme.dark : colorScheme.light;
                       return (
-                        <tr key={p.id} className={`${colors.bg} border-b border-slate-200 hover:bg-slate-50/60 transition group/row`}>
+                        <tr key={p.id} className={`${colors.bg} border-b ${isDarkMode ? 'border-slate-800 hover:bg-slate-800/60' : 'border-slate-200 hover:bg-slate-50/60'} transition group/row`}>
                           <td className={`p-5 align-top border-l-4 ${colors.border} break-words`}>
                             <div className="flex flex-col gap-1 break-words">
                               <AutoSaveInput 
@@ -713,14 +792,14 @@
                               <div className="flex items-center gap-2 opacity-0 group-hover/row:opacity-100 transition duration-150 text-xs mt-2">
                                 <button 
                                   onClick={() => updateProjectField(p.id, 'archived', !p.archived)} 
-                                  className="text-slate-400 hover:text-amber-600 font-medium transition"
+                                  className="text-slate-400 hover:text-amber-500 font-medium transition"
                                 >
                                   {p.archived ? "Unarchive" : "Archive"}
                                 </button>
-                                <span className="text-slate-300">|</span>
+                                <span className="text-slate-600">|</span>
                                 <button 
                                   onClick={() => deleteProject(p.id)} 
-                                  className="text-slate-400 hover:text-red-600 font-medium transition"
+                                  className="text-slate-400 hover:text-red-500 font-medium transition"
                                 >
                                   Delete
                                 </button>
@@ -729,31 +808,30 @@
                           </td>
 
                           <td className="p-5 align-top">
-                            <div className="flex flex-col gap-1">
-                              <select 
-                                value={p.priority} 
-                                onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
-                                className={`p-1 rounded text-sm bg-white border border-slate-200 outline-none font-bold text-center cursor-pointer w-full max-w-[100px] ${colors.text}`}
-                              >
-                                {PRIORITIES.map(opt => (
-                                  <option key={opt.level} value={opt.level}>
-                                    {opt.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                            <select 
+                              value={p.priority} 
+                              onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
+                              className={`p-1 rounded text-sm border outline-none font-bold text-center cursor-pointer w-full max-w-[100px] ${colors.text} ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                            >
+                              {PRIORITIES.map(opt => (
+                                <option key={opt.level} value={opt.level} className={isDarkMode ? 'bg-slate-900 text-white' : ''}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
                           </td>
 
                           <td className="p-5 align-top">
                             <select 
                               value={p.category || 'None'} 
                               onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
-                              className={`p-1 rounded text-sm bg-white border border-slate-200 outline-none font-semibold ${colors.text} cursor-pointer w-full max-w-[130px]`}
+                              className={`p-1 rounded text-sm border outline-none font-semibold ${colors.text} cursor-pointer w-full max-w-[130px] ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
                             >
-                              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                              {CATEGORIES.map(c => <option key={c} value={c} className={isDarkMode ? 'bg-slate-900 text-white' : ''}>{c}</option>)}
                             </select>
                           </td>
 
+                          {/* "What's Done" Column */}
                           <td className="p-5 align-top break-words">
                             <AutoResizeTextarea 
                               value={p.status || ''} 
@@ -763,10 +841,12 @@
                             />
                           </td>
 
+                          {/* "Pick Up From" Column */}
                           <td className="p-5 align-top break-words">
                             {renderList(p, 'nextSteps', colors)}
                           </td>
 
+                          {/* "Notes" Column */}
                           <td className="p-5 align-top break-words">
                             {renderList(p, 'notes', colors)}
                           </td>
@@ -777,7 +857,7 @@
                                 <button 
                                   onClick={() => moveProject(index, -1)}
                                   disabled={index === 0}
-                                  className="p-1 text-slate-400 hover:text-amber-600 disabled:opacity-20 transition"
+                                  className="p-1 text-slate-400 hover:text-amber-500 disabled:opacity-20 transition"
                                   title="Move Up"
                                 >
                                   ▲
@@ -785,14 +865,14 @@
                                 <button 
                                   onClick={() => moveProject(index, 1)}
                                   disabled={index === displayedProjects.length - 1}
-                                  className="p-1 text-slate-400 hover:text-amber-600 disabled:opacity-20 transition"
+                                  className="p-1 text-slate-400 hover:text-amber-500 disabled:opacity-20 transition"
                                   title="Move Down"
                                 >
                                   ▼
                                 </button>
                               </div>
                             ) : (
-                              <div className="text-xs text-slate-400 font-medium italic mt-2" title="Manual reordering is disabled while active sort or filters are applied.">
+                              <div className="text-xs text-slate-500 font-medium italic mt-2" title="Manual reordering is disabled while active sort or filters are applied.">
                                 Sorted
                               </div>
                             )}
@@ -809,7 +889,7 @@
                           {!showArchived && priorityFilter === 'all' && (
                             <button 
                               onClick={createProject} 
-                              className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded shadow transition"
+                              className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded shadow transition"
                             >
                               Create Your First Project
                             </button>
@@ -822,10 +902,10 @@
               </div>
 
               {displayedProjects.length > 0 && !showArchived && (
-                <div className="p-5 border-t border-slate-100 bg-slate-50/50">
+                <div className={`p-5 border-t ${isDarkMode ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50/50'}`}>
                   <button 
                     onClick={createProject} 
-                    className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold shadow hover:shadow-md transition"
+                    className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg font-bold shadow hover:shadow-md transition"
                   >
                     + New Project
                   </button>
