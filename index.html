@@ -110,7 +110,6 @@
       }
     ];
 
-    // Input component with clipboard sanitization
     const AutoSaveInput = ({ value, onSave, className, placeholder }) => {
       const elRef = useRef(null);
       const committedValue = useRef(value || '');
@@ -139,7 +138,6 @@
         }
       };
 
-      // Strip formatted HTML/scripts on paste to prevent DOM tampering
       const handlePaste = (e) => {
         e.preventDefault();
         const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
@@ -259,7 +257,6 @@
       useEffect(() => {
         if (!user || isDemoMode) return;
         
-        // Strict boundary: Document queries are always scoped directly to current authenticated user UID
         return db.collection('users').doc(user.uid).collection('projects')
           .onSnapshot(snapshot => {
             let data = snapshot.docs.map(doc => {
@@ -458,62 +455,111 @@
       if (!user && !isDemoMode) {
         return (
           <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col lg:flex-row font-sans">
-            <div className="flex-1 lg:flex-[1.2] p-6 sm:p-10 lg:p-14 flex flex-col justify-center items-start">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-semibold mb-6">
-                <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
-                Focus-First Workspace
-              </div>
+            {/* Main Hero Content Area - Expanded for Balanced Desktop Layout */}
+            <div className="flex-1 p-8 sm:p-12 lg:p-16 flex flex-col justify-between items-start max-w-7xl mx-auto w-full">
               
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight mb-4 text-white">
-                Zero-Friction Project Tracking
-              </h1>
-              
-              <p className="text-slate-400 text-base sm:text-lg max-w-xl leading-relaxed mb-8">
-                Cut through the noise of bloated enterprise tools. See what’s next, sequence your priorities, and keep momentum—without administrative clutter.
-              </p>
-
-              <div className="w-full max-w-xl bg-slate-800/90 border border-slate-700/80 rounded-xl p-4 shadow-2xl">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-700/60 mb-4">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                  <span className="text-xs font-mono text-slate-400 ml-2">Active Board Preview</span>
+              <div className="w-full">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-semibold mb-6">
+                  <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+                  Focus-First System
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                    <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">WHAT'S NEXT</div>
-                    <div className="bg-slate-800/90 p-2.5 rounded border border-slate-700/70 mb-2">
-                      <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 mb-1 border border-orange-500/30">CAREER</span>
-                      <p className="text-xs font-semibold text-slate-200">Finalize Q3 Strategic Roadmap</p>
-                    </div>
-                    <div className="bg-slate-800/90 p-2.5 rounded border border-slate-700/70">
-                      <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 mb-1 border border-blue-500/30">PERSONAL</span>
-                      <p className="text-xs font-semibold text-slate-200">Garden drip irrigation setup</p>
-                    </div>
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-4 text-white max-w-3xl">
+                  Zero-Friction Project Tracking
+                </h1>
+                
+                <p className="text-slate-300 text-base sm:text-lg max-w-2xl leading-relaxed mb-10">
+                  Built on a <strong>pure simplistic</strong> workflow. Easily <strong>track active projects</strong>, instantly review <strong>what you have done and what's next</strong>, and <strong>avoid cognitive overwhelm</strong> without software clutter.
+                </p>
+
+                {/* Benefits Matrix */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10 w-full max-w-5xl">
+                  <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+                    <div className="text-amber-400 text-lg mb-1">✨</div>
+                    <div className="font-bold text-sm text-slate-100 mb-1">Pure Simplistic</div>
+                    <div className="text-xs text-slate-400 leading-normal">Zero configuration or admin bloat. Focus purely on execution.</div>
                   </div>
 
-                  <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                    <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">WHAT'S DONE</div>
-                    <div className="bg-slate-800/60 p-2.5 rounded border border-slate-700/40 opacity-60">
-                      <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 mb-1 border border-purple-500/30">LEARNING</span>
-                      <p className="text-xs font-semibold text-slate-400 line-through">Deploy Firebase security rules</p>
+                  <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+                    <div className="text-sky-400 text-lg mb-1">🎯</div>
+                    <div className="font-bold text-sm text-slate-100 mb-1">Track Active Projects</div>
+                    <div className="text-xs text-slate-400 leading-normal">A single high-density view for all active streams.</div>
+                  </div>
+
+                  <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+                    <div className="text-emerald-400 text-lg mb-1">📋</div>
+                    <div className="font-bold text-sm text-slate-100 mb-1">Done & What's Next</div>
+                    <div className="text-xs text-slate-400 leading-normal">Immediate clarity on completed milestones and next steps.</div>
+                  </div>
+
+                  <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+                    <div className="text-purple-400 text-lg mb-1">🔒</div>
+                    <div className="font-bold text-sm text-slate-100 mb-1">Keep It Private</div>
+                    <div className="text-xs text-slate-400 leading-normal">Avoid cognitive overwhelm in a isolated secure workspace.</div>
+                  </div>
+                </div>
+
+                {/* CSS UI Mockup Box - Expanded Width */}
+                <div className="w-full max-w-4xl bg-slate-800/90 border border-slate-700/80 rounded-xl p-5 shadow-2xl">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-700/60 mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                      <span className="text-xs font-mono text-slate-400 ml-2">Active Board Preview</span>
+                    </div>
+                    <span className="text-xs text-slate-400 font-mono">Live Demo Stream</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-slate-900/80 p-4 rounded-lg border border-slate-800">
+                      <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-3">WHAT'S NEXT</div>
+                      <div className="bg-slate-800/90 p-3 rounded border border-slate-700/70 mb-2.5">
+                        <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 mb-1 border border-orange-500/30">CAREER</span>
+                        <p className="text-xs font-semibold text-slate-200">Finalize Q3 Strategic Roadmap</p>
+                      </div>
+                      <div className="bg-slate-800/90 p-3 rounded border border-slate-700/70">
+                        <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 mb-1 border border-blue-500/30">PERSONAL</span>
+                        <p className="text-xs font-semibold text-slate-200">Garden drip irrigation setup</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-900/80 p-4 rounded-lg border border-slate-800">
+                      <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-3">WHAT'S DONE</div>
+                      <div className="bg-slate-800/60 p-3 rounded border border-slate-700/40 opacity-70">
+                        <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 mb-1 border border-purple-500/30">LEARNING</span>
+                        <p className="text-xs font-semibold text-slate-400 line-through">Deploy Firebase security rules</p>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="mt-8 text-xs text-slate-500 font-mono">
+                Pure Simplistic Architecture • Zero Overwhelm
               </div>
             </div>
 
-            <div className="w-full lg:w-[420px] bg-slate-800/60 border-t lg:border-t-0 lg:border-l border-slate-700/60 p-6 sm:p-10 flex items-center justify-center">
+            {/* Right Side Login Panel */}
+            <div className="w-full lg:w-[440px] bg-slate-800/70 border-t lg:border-t-0 lg:border-l border-slate-700/60 p-8 sm:p-12 flex items-center justify-center">
               <div className="w-full max-w-sm text-center">
-                <h2 className="text-2xl font-bold text-white mb-2">Get Started</h2>
-                <p className="text-slate-400 text-sm mb-6">
-                  Access your private workspace or explore the live demo instantly.
+                
+                {/* Banner Header */}
+                <div className="inline-block px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-xs font-extrabold uppercase tracking-wide mb-3">
+                  100% Free Forever
+                </div>
+
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">
+                  Create your own, for free!
+                </h2>
+                
+                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-8">
+                  Get instant access to your clean workspace. Track active projects, organize what you have done and what's next, avoid cognitive overwhelm, and keep it private.
                 </p>
 
                 <button 
                   onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}
-                  className="w-full py-3 px-4 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-lg shadow transition duration-150 flex items-center justify-center gap-3 text-sm"
+                  className="w-full py-3.5 px-4 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-lg shadow-lg transition duration-150 flex items-center justify-center gap-3 text-sm"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -536,8 +582,8 @@
                   View Live Demo
                 </button>
 
-                <div className="mt-6 text-xs text-slate-500">
-                  🔒 Private & Secure. Authenticated directly with Google Firebase.
+                <div className="mt-8 text-xs text-slate-400 bg-slate-900/60 p-3 rounded-lg border border-slate-700/50">
+                  🔒 <strong>Keep It Private:</strong> Direct user-isolated database auth. Zero tracking, zero ads.
                 </div>
               </div>
             </div>
