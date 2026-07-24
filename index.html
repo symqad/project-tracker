@@ -105,27 +105,27 @@
     const DEMO_PROJECTS = [
       {
         id: 'demo-1',
-        name: 'Q3 Strategic Roadmap',
+        name: 'Website Redesign & Launch',
         category: 'Career',
         priority: 2,
         orderIndex: 100,
-        status: 'Aligned cross-functional leads and locked budget constraints.',
+        status: 'Approved hero copy and finalized brand color palette.',
         nextSteps: [
-          { id: 'd1-1', text: 'Finalize core execution milestones', done: false, indent: 0 },
-          { id: 'd1-2', text: 'Publish team resource matrix', done: true, indent: 0 }
+          { id: 'd1-1', text: 'Build responsive landing components', done: false, indent: 0 },
+          { id: 'd1-2', text: 'Configure custom domain SSL', done: true, indent: 0 }
         ],
-        notes: [{ id: 'dn1-1', text: 'Keep delivery zero-friction.', done: false, indent: 0 }],
+        notes: [{ id: 'dn1-1', text: 'Keep mobile JS bundle size under 50kb.', done: false, indent: 0 }],
         archived: false
       },
       {
         id: 'demo-2',
-        name: 'Garden Drip Irrigation',
+        name: 'Fall Lawn Overseeding',
         category: 'Personal',
         priority: 1,
         orderIndex: 200,
-        status: 'Perimeter and pressure ratings verified.',
-        nextSteps: [{ id: 'd2-1', text: 'Source 1/2 inch manifold fittings', done: false, indent: 0 }],
-        notes: [],
+        status: 'Core aerated and mowed down lawn to 1.5 inches.',
+        nextSteps: [{ id: 'd2-1', text: 'Spread KBG seed blend and starter fertilizer', done: false, indent: 0 }],
+        notes: [{ id: 'dn2-1', text: 'Water 2x daily for 15 mins until germination.', done: false, indent: 0 }],
         archived: false
       }
     ];
@@ -161,7 +161,12 @@
       const handlePaste = (e) => {
         e.preventDefault();
         const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
-        document.execCommand('insertText', false, plainText);
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+        selection.deleteFromDocument();
+        const textNode = document.createTextNode(plainText);
+        selection.getRangeAt(0).insertNode(textNode);
+        selection.collapse(textNode, textNode.length);
       };
 
       return (
@@ -179,10 +184,11 @@
       );
     };
 
-    const AutoResizeTextarea = ({ value, onSave, onKeyDown, autoFocus, className, placeholder }) => {
+    const AutoResizeTextarea = ({ value, onSave, onKeyDown, onPasteCustom, autoFocus, onFocused, className, placeholder }) => {
       const textareaRef = useRef(null);
       const [val, setVal] = useState(value || '');
       const isFocused = useRef(false);
+      const isHandlingKey = useRef(false);
 
       useEffect(() => {
         if (!isFocused.current) {
@@ -203,10 +209,30 @@
           textareaRef.current.focus();
           const len = textareaRef.current.value.length;
           textareaRef.current.setSelectionRange(len, len);
+          if (onFocused) onFocused();
         }
       }, [autoFocus]);
 
+      const handleBlur = () => {
+        isFocused.current = false;
+        if (!isHandlingKey.current && val !== value) {
+          onSave(val);
+        }
+        isHandlingKey.current = false;
+      };
+
+      const handleKeyDownInternal = (e) => {
+        if (e.key === 'Enter' || (e.key === 'Backspace' && val === '')) {
+          isHandlingKey.current = true;
+        }
+        if (onKeyDown) onKeyDown(e, val);
+      };
+
       const handlePaste = (e) => {
+        if (onPasteCustom) {
+          onPasteCustom(e, val);
+          return;
+        }
         e.preventDefault();
         const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
         const target = e.target;
@@ -225,11 +251,8 @@
           onChange={(e) => setVal(e.target.value)}
           onPaste={handlePaste}
           onFocus={() => { isFocused.current = true; }}
-          onBlur={() => { 
-            isFocused.current = false; 
-            if (val !== value) onSave(val); 
-          }} 
-          onKeyDown={(e) => { if (onKeyDown) onKeyDown(e, val); }}
+          onBlur={handleBlur} 
+          onKeyDown={handleKeyDownInternal}
           className={`${className} resize-none overflow-hidden bg-transparent border-none focus:ring-0 p-0 break-words whitespace-normal`} 
           rows={1} 
         />
@@ -264,13 +287,13 @@
       const [showArchived, setShowArchived] = useState(false);
       
       const [isDarkMode, setIsDarkMode] = useState(() => {
-        return localStorage.getItem('theme') === 'dark' || true;
+        const savedTheme = localStorage.getItem('theme');
+        return savedTheme ? savedTheme === 'dark' : false;
       });
 
       const [priorityFilter, setPriorityFilter] = useState('all');
       const [sortBy, setSortBy] = useState('manual');
 
-      // Check URL search params for direct demo launch
       useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('demo') === 'true') {
@@ -336,7 +359,6 @@
       const launchDemoInNewTab = () => {
         const demoUrl = window.location.origin + window.location.pathname + '?demo=true';
         const openedWindow = window.open(demoUrl, '_blank');
-        // Fallback if popup blocker intercepted new window
         if (!openedWindow || openedWindow.closed || typeof openedWindow.closed === 'undefined') {
           startDemoMode();
         }
@@ -450,6 +472,31 @@
         }
       };
 
+      const handleListPaste = (e, project, field, idx, currentText) => {
+        const rawText = (e.clipboardData || window.clipboardData).getData('text/plain');
+        if (!rawText.includes('\n') && !rawText.includes('\r')) {
+          return;
+        }
+        e.preventDefault();
+        const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+        if (lines.length === 0) return;
+
+        const list = [...(project[field] || [])];
+        const indentLevel = list[idx]?.indent || 0;
+
+        list[idx] = { ...list[idx], text: currentText ? `${currentText} ${lines[0]}` : lines[0] };
+
+        const newItems = lines.slice(1).map((line, i) => ({
+          id: `item-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 4)}`,
+          text: line,
+          done: false,
+          indent: indentLevel
+        }));
+
+        list.splice(idx + 1, 0, ...newItems);
+        updateProjectField(project.id, field, list);
+      };
+
       const renderList = (project, field, colors) => {
         const list = project[field] || [];
         return (
@@ -477,12 +524,14 @@
                     value={item.text || ''}
                     placeholder="..."
                     autoFocus={focusId === item.id}
+                    onFocused={() => setFocusId(null)}
                     onSave={(v) => {
                       const newList = [...list];
                       newList[idx] = { ...newList[idx], text: v };
                       updateProjectField(project.id, field, newList);
                     }}
                     onKeyDown={(e, textVal) => handleListKeyDown(e, project, field, item, idx, textVal)}
+                    onPasteCustom={(e, textVal) => handleListPaste(e, project, field, idx, textVal)}
                     className={`flex-1 bg-transparent border-none focus:ring-0 text-sm py-0 px-1 leading-relaxed outline-none break-words ${colors.text} ${item.done ? 'line-through opacity-40' : ''}`}
                   />
                 </div>
@@ -508,7 +557,6 @@
       if (!user && !isDemoMode) {
         return (
           <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col lg:flex-row font-sans">
-            {/* Main Hero Content Area */}
             <div className="flex-1 p-8 sm:p-12 lg:p-16 flex flex-col justify-between items-start max-w-7xl mx-auto w-full">
               
               <div className="w-full">
@@ -518,99 +566,97 @@
                 </div>
                 
                 <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-4 text-white max-w-3xl">
-                  Zero-Friction Project Tracking
+                  Zero-Friction Personal Project Tracker
                 </h1>
                 
                 <p className="text-slate-300 text-base sm:text-lg max-w-2xl leading-relaxed mb-10">
                   Built on a <strong>pure simplistic</strong> workflow. Easily <strong>track active projects</strong>, instantly review <strong>what you have done and what's next</strong>, and <strong>avoid cognitive overwhelm</strong> without software clutter.
                 </p>
 
-                {/* Benefits Matrix - Enhanced Font Sizes */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10 w-full max-w-5xl">
-                  <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
-                    <div className="text-2xl mb-2">✨</div>
-                    <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Pure Simplistic</div>
-                    <div className="text-sm text-slate-300 leading-relaxed">Zero configuration or admin bloat. Focus purely on execution.</div>
-                  </div>
-
-                  <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
-                    <div className="text-2xl mb-2">🎯</div>
-                    <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Track Active Projects</div>
-                    <div className="text-sm text-slate-300 leading-relaxed">A single high-density view for all active streams.</div>
-                  </div>
-
-                  <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
-                    <div className="text-2xl mb-2">📋</div>
-                    <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Done & What's Next</div>
-                    <div className="text-sm text-slate-300 leading-relaxed">Immediate clarity on completed milestones and next steps.</div>
-                  </div>
-
-                  <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
-                    <div className="text-2xl mb-2">🔒</div>
-                    <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Keep It Private</div>
-                    <div className="text-sm text-slate-300 leading-relaxed">Avoid cognitive overwhelm in an isolated secure workspace.</div>
-                  </div>
-                </div>
-
-                {/* UI Mockup - Reflecting Actual Board Layout */}
-                <div className="w-full max-w-4xl bg-slate-800/90 border border-slate-700 rounded-xl p-5 shadow-2xl">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-700 mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                      <span className="text-xs font-mono text-slate-400 ml-2">Real Board Preview</span>
+                <div className="w-full max-w-5xl">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8 w-full">
+                    <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
+                      <div className="text-2xl mb-2">✨</div>
+                      <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Pure Simplistic</div>
+                      <div className="text-sm text-slate-300 leading-relaxed">Zero configuration or admin bloat. Focus purely on execution.</div>
                     </div>
-                    <span className="text-xs text-amber-400 font-mono">Live Table View</span>
+
+                    <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
+                      <div className="text-2xl mb-2">🎯</div>
+                      <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Track Active Projects</div>
+                      <div className="text-sm text-slate-300 leading-relaxed">A single high-density view for all active streams.</div>
+                    </div>
+
+                    <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
+                      <div className="text-2xl mb-2">📋</div>
+                      <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Done & What's Next</div>
+                      <div className="text-sm text-slate-300 leading-relaxed">Immediate clarity on completed milestones and next steps.</div>
+                    </div>
+
+                    <div className="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
+                      <div className="text-2xl mb-2">🔒</div>
+                      <div className="font-bold text-base sm:text-lg text-slate-100 mb-2">Keep It Private</div>
+                      <div className="text-sm text-slate-300 leading-relaxed">Avoid cognitive overwhelm in an isolated secure workspace.</div>
+                    </div>
                   </div>
-                  
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="bg-amber-400 text-slate-950 font-black uppercase tracking-wider text-[11px]">
-                          <th className="p-2.5 rounded-l">PROJECT</th>
-                          <th className="p-2.5">PRIORITY</th>
-                          <th className="p-2.5">CATEGORY</th>
-                          <th className="p-2.5">WHAT'S DONE</th>
-                          <th className="p-2.5 rounded-r">PICK UP FROM</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700/60 text-slate-300">
-                        <tr>
-                          <td className="p-3 font-bold text-slate-100">Q3 Strategic Roadmap</td>
-                          <td className="p-3">‼️</td>
-                          <td className="p-3"><span className="px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30">Career</span></td>
-                          <td className="p-3 text-slate-400">Aligned cross-functional leads and locked budget constraints.</td>
-                          <td className="p-3 font-medium text-emerald-400">• Finalize core execution milestones</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-bold text-slate-100">Garden Drip Irrigation</td>
-                          <td className="p-3">❗</td>
-                          <td className="p-3"><span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Personal</span></td>
-                          <td className="p-3 text-slate-400">Perimeter and pressure ratings verified.</td>
-                          <td className="p-3 font-medium text-emerald-400">• Source 1/2 inch manifold fittings</td>
-                        </tr>
-                      </tbody>
-                    </table>
+
+                  <div className="w-full bg-slate-800/90 border border-slate-700 rounded-xl p-5 shadow-2xl mb-10">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-700 mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <span className="text-xs font-mono text-slate-400 ml-2">Real Board Preview</span>
+                      </div>
+                      <span className="text-xs text-amber-400 font-mono">Live Table View</span>
+                    </div>
+                    
+                    <div className="overflow-x-auto custom-scrollbar">
+                      <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+                        <thead>
+                          <tr className="bg-amber-400 text-slate-950 font-black uppercase tracking-wider text-[11px]">
+                            <th className="p-2.5 rounded-l w-[20%]">PROJECT</th>
+                            <th className="p-2.5 w-[8%]">PRIORITY</th>
+                            <th className="p-2.5 w-[12%]">CATEGORY</th>
+                            <th className="p-2.5 w-[20%]">WHAT'S DONE</th>
+                            <th className="p-2.5 w-[20%]">PICK UP FROM</th>
+                            <th className="p-2.5 rounded-r w-[20%]">NOTES</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700/60 text-slate-300">
+                          <tr>
+                            <td className="p-3 font-bold text-slate-100">Website Redesign & Launch</td>
+                            <td className="p-3">‼️</td>
+                            <td className="p-3"><span className="px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30">Career</span></td>
+                            <td className="p-3 text-slate-400">Approved hero copy and finalized brand color palette.</td>
+                            <td className="p-3 font-medium text-emerald-400">• Build responsive landing components</td>
+                            <td className="p-3 text-slate-400">• Keep mobile JS bundle size under 50kb.</td>
+                          </tr>
+                          <tr>
+                            <td className="p-3 font-bold text-slate-100">Fall Lawn Overseeding</td>
+                            <td className="p-3">❗</td>
+                            <td className="p-3"><span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Personal</span></td>
+                            <td className="p-3 text-slate-400">Core aerated and mowed down lawn to 1.5 inches.</td>
+                            <td className="p-3 font-medium text-emerald-400">• Spread KBG seed blend and starter fertilizer</td>
+                            <td className="p-3 text-slate-400">• Water 2x daily for 15 mins until germination.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-8 text-xs text-slate-500 font-mono">
+              <div className="mt-4 text-xs text-slate-500 font-mono">
                 Pure Simplistic Architecture • Zero Overwhelm
               </div>
             </div>
 
-            {/* Right Side Login Panel */}
             <div className="w-full lg:w-[440px] bg-slate-800/70 border-t lg:border-t-0 lg:border-l border-slate-700/60 p-8 sm:p-12 flex items-center justify-center">
               <div className="w-full max-w-sm text-center">
                 
-                <div className="inline-block px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-xs font-extrabold uppercase tracking-wide mb-3">
-                  100% Free Forever
-                </div>
-
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">
-                  Create your own, for free!
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 tracking-tight">
+                  Create your own, for free
                 </h2>
                 
                 <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-8">
@@ -635,15 +681,17 @@
                   <div className="relative flex justify-center text-xs uppercase"><span className="bg-slate-800 px-2 text-slate-500 font-semibold">OR</span></div>
                 </div>
 
+                {/* Direct Demo Launch with standard icon symbol only */}
                 <button 
                   onClick={launchDemoInNewTab}
-                  className="w-full py-3 px-4 bg-transparent hover:bg-slate-700/50 text-sky-400 font-bold rounded-lg border border-sky-500/40 transition duration-150 text-sm"
+                  className="w-full py-3 px-4 bg-transparent hover:bg-slate-700/50 text-sky-400 font-bold rounded-lg border border-sky-500/40 transition duration-150 text-sm flex items-center justify-center gap-1.5"
                 >
-                  View Live Demo (New Tab ↗)
+                  <span>View Live Demo</span>
+                  <span className="text-base leading-none">↗</span>
                 </button>
 
-                <div className="mt-8 text-xs text-slate-400 bg-slate-900/60 p-3 rounded-lg border border-slate-700/50">
-                  🔒 <strong>Keep It Private:</strong> Direct user-isolated database auth. Zero tracking, zero ads.
+                <div className="mt-8 text-xs text-slate-400 bg-slate-900/60 p-3.5 rounded-lg border border-slate-700/50 leading-relaxed text-left">
+                  🔒 <strong>Keep It Private:</strong> Direct user-isolated database authentication via Google OAuth. <strong>No passwords or login credentials are ever stored.</strong>
                 </div>
               </div>
             </div>
@@ -671,18 +719,18 @@
       return (
         <ErrorBoundary>
           {isDemoMode && (
-            <div className="bg-sky-600 text-white text-xs font-semibold px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 shadow">
+            <div className="bg-sky-600 text-white text-xs font-semibold px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 shadow">
               <span>⚡ You are viewing an interactive Live Demo sandbox.</span>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={exitDemoMode}
-                  className="bg-sky-800 text-white px-3 py-1 rounded font-bold hover:bg-sky-900 transition"
+                  className="bg-amber-400 hover:bg-amber-500 text-slate-950 px-3.5 py-1.5 rounded-lg font-extrabold transition shadow shadow-amber-500/20"
                 >
                   ← Exit Demo / Go Home
                 </button>
                 <button 
                   onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}
-                  className="bg-white text-sky-950 px-3 py-1 rounded font-bold hover:bg-sky-50 transition"
+                  className="bg-white text-sky-950 px-3.5 py-1.5 rounded-lg font-bold hover:bg-sky-50 transition"
                 >
                   Sign In with Google
                 </button>
@@ -700,7 +748,6 @@
               </div>
 
               <div className="flex flex-wrap gap-2 items-center">
-                {/* Dark Mode Toggle */}
                 <button 
                   onClick={() => setIsDarkMode(!isDarkMode)} 
                   className={`px-3 py-1.5 text-xs rounded-lg font-bold border transition ${isDarkMode ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'}`}
@@ -831,7 +878,6 @@
                             </select>
                           </td>
 
-                          {/* "What's Done" Column */}
                           <td className="p-5 align-top break-words">
                             <AutoResizeTextarea 
                               value={p.status || ''} 
@@ -841,12 +887,10 @@
                             />
                           </td>
 
-                          {/* "Pick Up From" Column */}
                           <td className="p-5 align-top break-words">
                             {renderList(p, 'nextSteps', colors)}
                           </td>
 
-                          {/* "Notes" Column */}
                           <td className="p-5 align-top break-words">
                             {renderList(p, 'notes', colors)}
                           </td>
