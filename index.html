@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Personal Project Tracker</title>
   
-  <!-- Tailwind CSS CDN -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -13,9 +13,9 @@
     }
   </script>
 
-  <!-- React 18 & Babel CDN -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- React 18 & Babel CDN (Development builds for clear console reporting) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
@@ -30,7 +30,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect, useRef, Component } = React;
 
     // --- CONFIGURATION & CONSTANTS ---
     const CATEGORIES = ['Work', 'Personal', 'Projects', 'None'];
@@ -54,6 +54,7 @@
       }
     };
 
+    // High-Contrast Priority Mapping
     const PRIORITIES = [
       { 
         level: 0, 
@@ -72,10 +73,11 @@
       }
     ];
 
-    // --- HELPER UTILITIES ---
+    // --- SAFE DATA NORMALIZATION HELPERS ---
     const normalizeSteps = (items) => {
       if (!Array.isArray(items)) return [];
       return items.map((item, idx) => {
+        if (!item) return { id: `step-${Date.now()}-${idx}`, text: '', completed: false, indent: 0 };
         if (typeof item === 'string') {
           return { 
             id: `step-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`, 
@@ -173,20 +175,22 @@
 
     // --- MAIN APP COMPONENT ---
     function App() {
-      // Theme State (Default to Light Mode unless explicit 'dark')
+      // Theme State (Default to Light Mode unless explicitly set to 'dark')
       const [isDarkMode, setIsDarkMode] = useState(() => {
         return localStorage.getItem('tracker_theme') === 'dark';
       });
 
-      // View Navigation Tab State ('active' | 'paused' | 'completed')
+      // Global View Navigation Tab State ('active' | 'paused' | 'completed')
       const [currentView, setCurrentView] = useState('active');
 
-      // Projects State
+      // Projects State with Defensive Parsing Guard
       const [projects, setProjects] = useState(() => {
-        const saved = localStorage.getItem('project_tracker_data');
-        if (!saved) return INITIAL_PROJECTS;
         try {
+          const saved = localStorage.getItem('project_tracker_data');
+          if (!saved) return INITIAL_PROJECTS;
           const parsed = JSON.parse(saved);
+          if (!Array.isArray(parsed)) return INITIAL_PROJECTS;
+
           return parsed.map(p => ({
             ...p,
             status: p.status || (p.archived ? 'paused' : 'active'),
@@ -194,13 +198,18 @@
             notes: normalizeSteps(p.notes)
           }));
         } catch (e) {
+          console.warn('Could not parse legacy storage data, loading defaults.', e);
           return INITIAL_PROJECTS;
         }
       });
 
-      // LocalStorage Persistence
+      // Persistence
       useEffect(() => {
-        localStorage.setItem('project_tracker_data', JSON.stringify(projects));
+        try {
+          localStorage.setItem('project_tracker_data', JSON.stringify(projects));
+        } catch (e) {
+          console.error('Failed to save to localStorage:', e);
+        }
       }, [projects]);
 
       useEffect(() => {
@@ -212,7 +221,7 @@
         }
       }, [isDarkMode]);
 
-      // --- PROJECT MUTATION HANDLERS ---
+      // Project Mutation Handlers
       const addProject = () => {
         const newProj = {
           id: `proj-${Date.now()}`,
@@ -263,7 +272,7 @@
           if (p.id !== projectId) return p;
           return {
             ...p,
-            nextSteps: p.nextSteps.filter(s => !s.completed)
+            nextSteps: (p.nextSteps || []).filter(s => !s.completed)
           };
         }));
       };
@@ -279,7 +288,7 @@
         }
       };
 
-      // --- RENDER SUB-LIST HANDLER (NEXT STEPS & NOTES) ---
+      // --- SUB-LIST RENDERER (CHECKLIST & NOTES) ---
       const renderList = (project, field) => {
         const isNextSteps = field === 'nextSteps';
         const rawItems = project[field] || [];
@@ -367,7 +376,7 @@
                 key={step.id || idx} 
                 className={`group/step flex items-start gap-1.5 transition-all ${indentStyles[step.indent || 0]}`}
               >
-                {/* Manual Step Reorder Controls (▲ / ▼) */}
+                {/* Step Reorder Controls */}
                 <div className="flex flex-col text-[9px] text-slate-400 opacity-20 group-hover/step:opacity-100 transition pt-1">
                   <button 
                     onClick={() => moveStep(idx, 'up')} 
@@ -446,7 +455,6 @@
         );
       };
 
-      // Filtered Projects for Current Active View
       const displayedProjects = projects.filter(p => p.status === currentView);
 
       const activeCount = projects.filter(p => p.status === 'active').length;
@@ -531,7 +539,7 @@
             </div>
           </header>
 
-          {/* MAIN HIGH-DENSITY TABLE */}
+          {/* MAIN TABLE */}
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
@@ -564,7 +572,7 @@
                             : 'border-slate-200 bg-white hover:bg-slate-50'
                         }`}
                       >
-                        {/* 1. PROJECT NAME CELL (BORDER-L-4 APPLIED TO TD FOR RELIABLE STRIP RENDERING) */}
+                        {/* 1. PROJECT NAME CELL (BORDER-L-4 APPLIED TO FIRST TD FOR RELIABLE STRIP RENDERING) */}
                         <td className={`p-3.5 align-top border-r border-l-4 ${colorScheme.border} ${
                           isDarkMode ? 'border-r-slate-800' : 'border-r-slate-200'
                         }`}>
@@ -735,9 +743,50 @@
       );
     }
 
+    // --- FALLBACK ERROR BOUNDARY COMPONENT ---
+    class ErrorBoundary extends Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+      componentDidCatch(error, info) {
+        console.error("App Crash Caught:", error, info);
+      }
+      resetStorage() {
+        localStorage.removeItem('project_tracker_data');
+        window.location.reload();
+      }
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="p-8 max-w-lg mx-auto my-12 bg-white dark:bg-slate-900 rounded-xl border border-red-200 dark:border-red-800 shadow-md text-center space-y-4">
+              <h2 className="text-lg font-bold text-red-600">Storage Format Mismatch</h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Your browser contains cached data from an older schema that is preventing the update from rendering.
+              </p>
+              <button 
+                onClick={this.resetStorage}
+                className="bg-red-600 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-red-700 transition"
+              >
+                Reset Local Cache & Reload
+              </button>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
     // --- MOUNT APP ---
     const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    root.render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    );
   </script>
 </body>
 </html>
