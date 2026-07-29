@@ -1,39 +1,743 @@
-// High-Contrast Priority Definitions
-const PRIORITIES = [
-  { 
-    level: 0, 
-    label: 'None', 
-    badge: 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' 
-  },
-  { 
-    level: 1, 
-    label: '⚡ Medium', 
-    badge: 'bg-amber-400 text-slate-950 font-bold border-amber-500' 
-  },
-  { 
-    level: 2, 
-    label: '🚨 High', 
-    badge: 'bg-red-600 text-white font-bold border-red-700' 
-  }
-];
-
-// Normalizer to ensure legacy string/array steps auto-convert to structured sub-tasks
-const normalizeSteps = (items) => {
-  if (!Array.isArray(items)) return [];
-  return items.map((item, idx) => {
-    if (typeof item === 'string') {
-      return { 
-        id: `step-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`, 
-        text: item, 
-        completed: false, 
-        indent: 0 
-      };
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Project Tracker</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
     }
-    return {
-      id: item.id || `step-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
-      text: item.text || '',
-      completed: !!item.completed,
-      indent: typeof item.indent === 'number' ? item.indent : 0
+  </script>
+
+  <!-- React 18 & Babel CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    textarea {
+      resize: none;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
+  
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- CONFIGURATION & CONSTANTS ---
+    const CATEGORIES = ['Work', 'Personal', 'Projects', 'None'];
+
+    const CATEGORY_COLORS = {
+      Work: { 
+        border: 'border-blue-500', 
+        badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 border-blue-300 dark:border-blue-700' 
+      },
+      Personal: { 
+        border: 'border-emerald-500', 
+        badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700' 
+      },
+      Projects: { 
+        border: 'border-purple-500', 
+        badge: 'bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200 border-purple-300 dark:border-purple-700' 
+      },
+      None: { 
+        border: 'border-slate-400', 
+        badge: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700' 
+      }
     };
-  });
-};
+
+    const PRIORITIES = [
+      { 
+        level: 0, 
+        label: 'None', 
+        badge: 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' 
+      },
+      { 
+        level: 1, 
+        label: '⚡ Medium', 
+        badge: 'bg-amber-400 text-slate-950 font-bold border-amber-500' 
+      },
+      { 
+        level: 2, 
+        label: '🚨 High', 
+        badge: 'bg-red-600 text-white font-bold border-red-700' 
+      }
+    ];
+
+    // --- HELPER UTILITIES ---
+    const normalizeSteps = (items) => {
+      if (!Array.isArray(items)) return [];
+      return items.map((item, idx) => {
+        if (typeof item === 'string') {
+          return { 
+            id: `step-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`, 
+            text: item, 
+            completed: false, 
+            indent: 0 
+          };
+        }
+        return {
+          id: item.id || `step-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+          text: item.text || '',
+          completed: !!item.completed,
+          indent: typeof item.indent === 'number' ? item.indent : 0
+        };
+      });
+    };
+
+    const INITIAL_PROJECTS = [
+      {
+        id: 'proj-1',
+        name: 'Revise OneNote (PARA System)',
+        briefStatus: 'Reorganizing notebooks into Projects, Areas, Resources, Archives.',
+        category: 'Work',
+        priority: 2,
+        status: 'active',
+        nextSteps: [
+          { id: 's1', text: 'Audit active project section', completed: true, indent: 0 },
+          { id: 's2', text: 'Create Archive bucket for 2025 notes', completed: false, indent: 1 }
+        ],
+        notes: [
+          { id: 'n1', text: 'Keep client call logs in Areas', completed: false, indent: 0 }
+        ]
+      },
+      {
+        id: 'proj-2',
+        name: 'Revise OneNote (SG)',
+        briefStatus: 'Cleaning up shared team guidelines.',
+        category: 'Projects',
+        priority: 1,
+        status: 'active',
+        nextSteps: [
+          { id: 's3', text: 'Draft updated SOP outline', completed: false, indent: 0 }
+        ],
+        notes: []
+      }
+    ];
+
+    // --- REUSABLE INPUT COMPONENTS ---
+    const AutoSaveInput = ({ value, onSave, placeholder, className }) => {
+      const [val, setVal] = useState(value || '');
+
+      useEffect(() => {
+        setVal(value || '');
+      }, [value]);
+
+      return (
+        <input
+          type="text"
+          value={val}
+          placeholder={placeholder}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={() => onSave(val)}
+          className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 ${className}`}
+        />
+      );
+    };
+
+    const AutoResizeTextarea = ({ value, onSave, placeholder, className }) => {
+      const [val, setVal] = useState(value || '');
+      const textareaRef = useRef(null);
+
+      useEffect(() => {
+        setVal(value || '');
+      }, [value]);
+
+      useEffect(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+      }, [val]);
+
+      return (
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={val}
+          placeholder={placeholder}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={() => onSave(val)}
+          className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 ${className}`}
+        />
+      );
+    };
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      // Theme State (Default to Light Mode unless explicit 'dark')
+      const [isDarkMode, setIsDarkMode] = useState(() => {
+        return localStorage.getItem('tracker_theme') === 'dark';
+      });
+
+      // View Navigation Tab State ('active' | 'paused' | 'completed')
+      const [currentView, setCurrentView] = useState('active');
+
+      // Projects State
+      const [projects, setProjects] = useState(() => {
+        const saved = localStorage.getItem('project_tracker_data');
+        if (!saved) return INITIAL_PROJECTS;
+        try {
+          const parsed = JSON.parse(saved);
+          return parsed.map(p => ({
+            ...p,
+            status: p.status || (p.archived ? 'paused' : 'active'),
+            nextSteps: normalizeSteps(p.nextSteps),
+            notes: normalizeSteps(p.notes)
+          }));
+        } catch (e) {
+          return INITIAL_PROJECTS;
+        }
+      });
+
+      // LocalStorage Persistence
+      useEffect(() => {
+        localStorage.setItem('project_tracker_data', JSON.stringify(projects));
+      }, [projects]);
+
+      useEffect(() => {
+        localStorage.setItem('tracker_theme', isDarkMode ? 'dark' : 'light');
+        if (isDarkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }, [isDarkMode]);
+
+      // --- PROJECT MUTATION HANDLERS ---
+      const addProject = () => {
+        const newProj = {
+          id: `proj-${Date.now()}`,
+          name: '',
+          briefStatus: '',
+          category: 'None',
+          priority: 0,
+          status: 'active',
+          nextSteps: [{ id: `step-${Date.now()}`, text: '', completed: false, indent: 0 }],
+          notes: []
+        };
+        setProjects([newProj, ...projects]);
+      };
+
+      const updateProjectField = (id, field, value) => {
+        setProjects(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+      };
+
+      const setProjectStatus = (id, newStatus) => {
+        setProjects(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
+      };
+
+      const deleteProject = (id) => {
+        if (confirm('Delete this project permanently?')) {
+          setProjects(prev => prev.filter(p => p.id !== id));
+        }
+      };
+
+      const moveProject = (indexInView, direction) => {
+        const viewProjects = projects.filter(p => p.status === currentView);
+        const targetViewIndex = direction === 'up' ? indexInView - 1 : indexInView + 1;
+        if (targetViewIndex < 0 || targetViewIndex >= viewProjects.length) return;
+
+        const p1 = viewProjects[indexInView];
+        const p2 = viewProjects[targetViewIndex];
+
+        const realIdx1 = projects.findIndex(p => p.id === p1.id);
+        const realIdx2 = projects.findIndex(p => p.id === p2.id);
+
+        const updated = [...projects];
+        updated[realIdx1] = p2;
+        updated[realIdx2] = p1;
+        setProjects(updated);
+      };
+
+      const purgeProjectSubSteps = (projectId) => {
+        setProjects(prev => prev.map(p => {
+          if (p.id !== projectId) return p;
+          return {
+            ...p,
+            nextSteps: p.nextSteps.filter(s => !s.completed)
+          };
+        }));
+      };
+
+      const purgeCompletedOlderThan30Days = () => {
+        if (confirm('Purge all completed projects older than 30 days?')) {
+          const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+          setProjects(prev => prev.filter(p => {
+            if (p.status !== 'completed') return true;
+            const createdTimestamp = parseInt(p.id.replace('proj-', ''), 10) || Date.now();
+            return createdTimestamp > thirtyDaysAgo;
+          }));
+        }
+      };
+
+      // --- RENDER SUB-LIST HANDLER (NEXT STEPS & NOTES) ---
+      const renderList = (project, field) => {
+        const isNextSteps = field === 'nextSteps';
+        const rawItems = project[field] || [];
+        const items = normalizeSteps(rawItems);
+
+        const moveStep = (index, direction) => {
+          const targetIdx = direction === 'up' ? index - 1 : index + 1;
+          if (targetIdx < 0 || targetIdx >= items.length) return;
+          const updated = [...items];
+          const temp = updated[index];
+          updated[index] = updated[targetIdx];
+          updated[targetIdx] = temp;
+          updateProjectField(project.id, field, updated);
+        };
+
+        const handleKeyDown = (e, index) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const newStep = {
+              id: `step-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+              text: '',
+              completed: false,
+              indent: items[index] ? items[index].indent : 0
+            };
+            const updated = [...items];
+            updated.splice(index + 1, 0, newStep);
+            updateProjectField(project.id, field, updated);
+
+            setTimeout(() => {
+              const nextInput = document.getElementById(`step-input-${project.id}-${field}-${index + 1}`);
+              if (nextInput) nextInput.focus();
+            }, 30);
+          } 
+          else if (e.key === 'Tab') {
+            e.preventDefault();
+            const updated = [...items];
+            const currentIndent = updated[index].indent || 0;
+            updated[index].indent = e.shiftKey ? Math.max(0, currentIndent - 1) : Math.min(2, currentIndent + 1);
+            updateProjectField(project.id, field, updated);
+          } 
+          else if (e.key === 'Backspace' && items[index].text === '' && items.length > 1) {
+            e.preventDefault();
+            const updated = items.filter((_, i) => i !== index);
+            updateProjectField(project.id, field, updated);
+
+            setTimeout(() => {
+              const prevInput = document.getElementById(`step-input-${project.id}-${field}-${Math.max(0, index - 1)}`);
+              if (prevInput) prevInput.focus();
+            }, 30);
+          }
+        };
+
+        const updateStepText = (index, val) => {
+          const updated = [...items];
+          updated[index].text = val;
+          updateProjectField(project.id, field, updated);
+        };
+
+        const toggleStepComplete = (index) => {
+          const updated = [...items];
+          updated[index].completed = !updated[index].completed;
+          updateProjectField(project.id, field, updated);
+        };
+
+        const addEmptyStep = () => {
+          const newStep = {
+            id: `step-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            text: '',
+            completed: false,
+            indent: 0
+          };
+          updateProjectField(project.id, field, [...items, newStep]);
+        };
+
+        const indentStyles = [
+          'ml-0', 
+          'ml-4 border-l-2 border-slate-300 dark:border-slate-700 pl-2', 
+          'ml-8 border-l-2 border-amber-400/60 dark:border-amber-500/40 pl-2'
+        ];
+
+        return (
+          <div className="space-y-1.5">
+            {items.map((step, idx) => (
+              <div 
+                key={step.id || idx} 
+                className={`group/step flex items-start gap-1.5 transition-all ${indentStyles[step.indent || 0]}`}
+              >
+                {/* Manual Step Reorder Controls (▲ / ▼) */}
+                <div className="flex flex-col text-[9px] text-slate-400 opacity-20 group-hover/step:opacity-100 transition pt-1">
+                  <button 
+                    onClick={() => moveStep(idx, 'up')} 
+                    disabled={idx === 0} 
+                    className="hover:text-amber-500 leading-none disabled:opacity-10"
+                    title="Move step up"
+                  >
+                    ▲
+                  </button>
+                  <button 
+                    onClick={() => moveStep(idx, 'down')} 
+                    disabled={idx === items.length - 1} 
+                    className="hover:text-amber-500 leading-none disabled:opacity-10"
+                    title="Move step down"
+                  >
+                    ▼
+                  </button>
+                </div>
+
+                {/* Checkbox */}
+                <input 
+                  type="checkbox" 
+                  checked={!!step.completed} 
+                  onChange={() => toggleStepComplete(idx)}
+                  className="mt-1 h-3.5 w-3.5 rounded border-slate-300 text-amber-500 focus:ring-amber-400 cursor-pointer"
+                />
+
+                {/* Text Input */}
+                <input 
+                  id={`step-input-${project.id}-${field}-${idx}`}
+                  type="text" 
+                  value={step.text} 
+                  onChange={(e) => updateStepText(idx, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, idx)}
+                  placeholder={isNextSteps ? "Type step... (Enter = new line, Tab = indent)" : "Type note..."}
+                  className={`flex-1 text-xs bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 focus:outline-none py-0.5 ${
+                    step.completed ? 'line-through text-slate-400' : isDarkMode ? 'text-slate-200' : 'text-slate-800'
+                  }`}
+                />
+
+                {/* Quick Indent Controls on Hover */}
+                <div className="hidden group-hover/step:flex items-center gap-1 text-[9px] text-slate-400 pt-1">
+                  <button 
+                    onClick={() => {
+                      const updated = [...items];
+                      updated[idx].indent = Math.max(0, (updated[idx].indent || 0) - 1);
+                      updateProjectField(project.id, field, updated);
+                    }}
+                    className="hover:text-amber-500 px-0.5" 
+                    title="Outdent (Shift+Tab)"
+                  >
+                    ←
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const updated = [...items];
+                      updated[idx].indent = Math.min(2, (updated[idx].indent || 0) + 1);
+                      updateProjectField(project.id, field, updated);
+                    }}
+                    className="hover:text-amber-500 px-0.5" 
+                    title="Indent (Tab)"
+                  >
+                    →
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <button 
+              onClick={addEmptyStep} 
+              className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline font-semibold mt-1 flex items-center gap-1"
+            >
+              + Add Item
+            </button>
+          </div>
+        );
+      };
+
+      // Filtered Projects for Current Active View
+      const displayedProjects = projects.filter(p => p.status === currentView);
+
+      const activeCount = projects.filter(p => p.status === 'active').length;
+      const pausedCount = projects.filter(p => p.status === 'paused').length;
+      const completedCount = projects.filter(p => p.status === 'completed').length;
+
+      return (
+        <div className="max-w-[1440px] mx-auto p-4 md:p-6 space-y-6">
+          
+          {/* HEADER BAR */}
+          <header className="flex flex-wrap justify-between items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+                PROJECT TRACKER
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Low-friction execution & system organization
+              </p>
+            </div>
+
+            {/* GLOBAL VIEW SWITCHER TABS */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800">
+              <button
+                onClick={() => setCurrentView('active')}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
+                  currentView === 'active' 
+                    ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                Active <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{activeCount}</span>
+              </button>
+
+              <button
+                onClick={() => setCurrentView('paused')}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
+                  currentView === 'paused' 
+                    ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                Paused <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{pausedCount}</span>
+              </button>
+
+              <button
+                onClick={() => setCurrentView('completed')}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
+                  currentView === 'completed' 
+                    ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                Completed <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{completedCount}</span>
+              </button>
+            </div>
+
+            {/* TOP ACTIONS */}
+            <div className="flex items-center gap-3">
+              {currentView === 'completed' && completedCount > 0 && (
+                <button 
+                  onClick={purgeCompletedOlderThan30Days}
+                  className="text-xs text-red-600 dark:text-red-400 hover:underline font-semibold"
+                >
+                  🧹 Purge > 30 Days
+                </button>
+              )}
+
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold"
+                title="Toggle Theme"
+              >
+                {isDarkMode ? '☀️ Light' : '🌙 Dark'}
+              </button>
+
+              <button
+                onClick={addProject}
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg text-xs shadow transition"
+              >
+                + New Project
+              </button>
+            </div>
+          </header>
+
+          {/* MAIN HIGH-DENSITY TABLE */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 text-[11px] font-mono uppercase text-slate-400">
+                  <th className="p-3 w-[22%]">Project Name</th>
+                  <th className="p-3 w-[20%]">Status Brief</th>
+                  <th className="p-3 w-[28%] bg-slate-100/60 dark:bg-slate-900/60">Next Steps (Checklist)</th>
+                  <th className="p-3 w-[15%]">Details</th>
+                  <th className="p-3 w-[15%]">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayedProjects.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="p-12 text-center text-slate-400 text-sm">
+                      No projects found in <strong>{currentView}</strong> view. Click "+ New Project" to create one.
+                    </td>
+                  </tr>
+                ) : (
+                  displayedProjects.map((p, index) => {
+                    const colorScheme = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
+                    const priorityMeta = PRIORITIES.find(pr => pr.level === p.priority) || PRIORITIES[0];
+
+                    return (
+                      <tr 
+                        key={p.id} 
+                        className={`transition group border-b ${
+                          isDarkMode 
+                            ? 'border-slate-800 bg-slate-900 hover:bg-slate-800/60' 
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        {/* 1. PROJECT NAME CELL (BORDER-L-4 APPLIED TO TD FOR RELIABLE STRIP RENDERING) */}
+                        <td className={`p-3.5 align-top border-r border-l-4 ${colorScheme.border} ${
+                          isDarkMode ? 'border-r-slate-800' : 'border-r-slate-200'
+                        }`}>
+                          <div className="flex items-start gap-2">
+                            {/* Project Reorder Controls */}
+                            <div className="flex flex-col text-[10px] text-slate-400 font-bold pt-0.5 opacity-40 group-hover:opacity-100 transition">
+                              <button 
+                                onClick={() => moveProject(index, 'up')} 
+                                disabled={index === 0} 
+                                className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20"
+                                title="Move project up"
+                              >
+                                ▲
+                              </button>
+                              <button 
+                                onClick={() => moveProject(index, 'down')} 
+                                disabled={index === displayedProjects.length - 1} 
+                                className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20"
+                                title="Move project down"
+                              >
+                                ▼
+                              </button>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <AutoSaveInput 
+                                value={p.name} 
+                                placeholder="Project Name..."
+                                onSave={(v) => updateProjectField(p.id, 'name', v)} 
+                                className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`} 
+                              />
+
+                              {/* Context-Aware Action Links */}
+                              <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+                                {currentView === 'active' && (
+                                  <>
+                                    <button 
+                                      onClick={() => setProjectStatus(p.id, 'paused')}
+                                      className="text-amber-600 dark:text-amber-400 hover:underline transition"
+                                    >
+                                      Pause
+                                    </button>
+                                    <span className="text-slate-300 dark:text-slate-700">•</span>
+                                    <button 
+                                      onClick={() => setProjectStatus(p.id, 'completed')}
+                                      className="text-emerald-600 dark:text-emerald-400 hover:underline transition"
+                                    >
+                                      Mark Complete
+                                    </button>
+                                  </>
+                                )}
+
+                                {currentView === 'paused' && (
+                                  <>
+                                    <button 
+                                      onClick={() => setProjectStatus(p.id, 'active')}
+                                      className="text-blue-600 dark:text-blue-400 hover:underline transition"
+                                    >
+                                      Resume
+                                    </button>
+                                    <span className="text-slate-300 dark:text-slate-700">•</span>
+                                    <button 
+                                      onClick={() => setProjectStatus(p.id, 'completed')}
+                                      className="text-emerald-600 dark:text-emerald-400 hover:underline transition"
+                                    >
+                                      Mark Complete
+                                    </button>
+                                  </>
+                                )}
+
+                                {currentView === 'completed' && (
+                                  <button 
+                                    onClick={() => setProjectStatus(p.id, 'active')}
+                                    className="text-blue-600 dark:text-blue-400 hover:underline transition"
+                                  >
+                                    Reactivate
+                                  </button>
+                                )}
+
+                                <span className="text-slate-300 dark:text-slate-700">•</span>
+                                <button 
+                                  onClick={() => deleteProject(p.id)} 
+                                  className="text-slate-400 hover:text-red-500 transition"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 2. STATUS BRIEF COLUMN */}
+                        <td className={`p-3.5 align-top border-r ${
+                          isDarkMode ? 'border-r-slate-800' : 'border-r-slate-200'
+                        }`}>
+                          <AutoResizeTextarea 
+                            value={p.briefStatus || ''} 
+                            placeholder="..."
+                            onSave={(v) => updateProjectField(p.id, 'briefStatus', v)} 
+                            className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                          />
+                        </td>
+
+                        {/* 3. NEXT STEPS COLUMN (DISTINCT SHADING & THICK BORDER) */}
+                        <td className={`p-3.5 align-top border-r-2 ${
+                          isDarkMode 
+                            ? 'border-r-slate-800 bg-slate-950/40' 
+                            : 'border-r-slate-300 bg-slate-50/80'
+                        }`}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] font-mono uppercase text-slate-400">Checklist</span>
+                            <button 
+                              onClick={() => purgeProjectSubSteps(p.id)}
+                              className="text-[10px] text-slate-400 hover:text-amber-500 font-semibold transition"
+                              title="Purge finished sub-steps in this project"
+                            >
+                              🧹 Purge Done Steps
+                            </button>
+                          </div>
+                          {renderList(p, 'nextSteps')}
+                        </td>
+
+                        {/* 4. DETAILS COLUMN (HIGH-CONTRAST PRIORITY & CATEGORY) */}
+                        <td className={`p-3.5 align-top border-r ${
+                          isDarkMode ? 'border-r-slate-800' : 'border-r-slate-200'
+                        }`}>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-[10px] uppercase font-mono text-slate-400 block mb-1">Priority</label>
+                              <select 
+                                value={p.priority} 
+                                onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
+                                className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer shadow-sm ${priorityMeta.badge}`}
+                              >
+                                {PRIORITIES.map(opt => (
+                                  <option key={opt.level} value={opt.level} className="bg-white text-slate-900 font-semibold">
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] uppercase font-mono text-slate-400 block mb-1">Category Domain</label>
+                              <select 
+                                value={p.category || 'None'} 
+                                onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
+                                className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer ${colorScheme.badge}`}
+                              >
+                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 5. NOTES COLUMN */}
+                        <td className="p-3.5 align-top">
+                          {renderList(p, 'notes')}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    // --- MOUNT APP ---
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
