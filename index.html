@@ -30,7 +30,7 @@
 
   <script type="text/babel" data-type="module">
     (() => {
-      const { useState, useEffect, useRef, useLayoutEffect } = React;
+      const { useState, useEffect, useRef, useLayoutEffect, useMemo } = React;
 
       // Sanitizer Guard & Character Limiter
       const sanitizeInput = (val, maxLen = null) => {
@@ -87,13 +87,14 @@
           category: 'Career',
           priority: 2,
           orderIndex: 100,
-          status: 'Approved hero copy and finalized brand color palette.',
+          status: 'active',
+          completedAt: null,
+          briefStatus: 'Approved hero copy and finalized brand color palette.',
           nextSteps: [
             { id: 'd1-1', text: 'Build responsive landing components', done: false },
             { id: 'd1-2', text: 'Configure custom domain SSL', done: true }
           ],
-          notes: [{ id: 'dn1-1', text: 'Keep mobile JS bundle size under 50kb.', done: false }],
-          archived: false
+          notes: [{ id: 'dn1-1', text: 'Keep mobile JS bundle size under 50kb.', done: false }]
         },
         {
           id: 'demo-2',
@@ -101,13 +102,14 @@
           category: 'Personal',
           priority: 1,
           orderIndex: 200,
-          status: 'Core aerated and mowed lawn to 1.5 inches.',
+          status: 'paused',
+          completedAt: null,
+          briefStatus: 'Core aerated and mowed lawn to 1.5 inches.',
           nextSteps: [
             { id: 'd2-1', text: 'Spread KBG seed blend and starter fertilizer', done: false },
             { id: 'd2-2', text: 'Set up automatic hose timer', done: true }
           ],
-          notes: [{ id: 'dn2-1', text: 'Water 2x daily for 15 mins until germination.', done: false }],
-          archived: false
+          notes: [{ id: 'dn2-1', text: 'Water 2x daily for 15 mins until germination.', done: false }]
         }
       ];
 
@@ -218,19 +220,22 @@
         const [loading, setLoading] = useState(true);
         const [projects, setProjects] = useState([]);
         const [focusId, setFocusId] = useState(null);
-        const [showArchived, setShowArchived] = useState(false);
+        
+        // VIEW SWITCHER STATE: 'active' | 'paused' | 'completed'
+        const [currentView, setCurrentView] = useState('active');
+
         const [expandedCompleted, setExpandedCompleted] = useState({});
         const [expandedMobileIds, setExpandedMobileIds] = useState({});
         
-        // Dark / Light Theme state
+        // DEFAULT LIGHT MODE: Returns true ONLY if 'dark' is explicitly in localStorage
         const [isDarkMode, setIsDarkMode] = useState(() => {
-          return localStorage.getItem('tracker_theme') !== 'light';
+          return localStorage.getItem('tracker_theme') === 'dark';
         });
 
         const toggleTheme = () => {
-          const next = !isDarkMode;
-          setIsDarkMode(next);
-          localStorage.setItem('tracker_theme', next ? 'dark' : 'light');
+          const nextMode = !isDarkMode;
+          setIsDarkMode(nextMode);
+          localStorage.setItem('tracker_theme', nextMode ? 'dark' : 'light');
         };
 
         const [isDemoMode, setIsDemoMode] = useState(() => {
@@ -265,13 +270,19 @@
               (snapshot) => {
                 const updatedProjects = snapshot.docs.map(doc => {
                   const raw = doc.data();
+                  
+                  // Backwards compatibility migration for legacy archived boolean
+                  let projectStatus = raw.status || (raw.archived ? 'paused' : 'active');
+
                   return {
                     id: doc.id,
                     name: typeof raw.name === 'string' ? sanitizeInput(raw.name) : '',
                     category: typeof raw.category === 'string' ? raw.category : 'None',
                     priority: typeof raw.priority === 'number' ? raw.priority : 0,
                     orderIndex: typeof raw.orderIndex === 'number' ? raw.orderIndex : 0,
-                    status: typeof raw.status === 'string' ? sanitizeInput(raw.status) : '',
+                    status: projectStatus,
+                    completedAt: raw.completedAt || null,
+                    briefStatus: typeof raw.briefStatus === 'string' ? sanitizeInput(raw.briefStatus) : (typeof raw.status === 'string' && !['active','paused','completed'].includes(raw.status) ? sanitizeInput(raw.status) : ''),
                     nextSteps: Array.isArray(raw.nextSteps) ? raw.nextSteps.map(item => ({
                       ...item,
                       text: sanitizeInput(item.text || '')
@@ -279,8 +290,7 @@
                     notes: Array.isArray(raw.notes) ? raw.notes.map(item => ({
                       ...item,
                       text: sanitizeInput(item.text || '', 1000)
-                    })) : [],
-                    archived: !!raw.archived
+                    })) : []
                   };
                 });
 
@@ -311,9 +321,25 @@
             .catch(err => console.error("Update failed:", err.message));
         };
 
+        const setProjectStatus = (id, newStatus) => {
+          const updates = { 
+            status: newStatus,
+            completedAt: newStatus === 'completed' ? new Date().toISOString() : null
+          };
+
+          if (isDemoMode) {
+            setProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+            return;
+          }
+
+          if (!user) return;
+          getProjectDoc(id).set(updates, { merge: true })
+            .catch(err => console.error("Status update failed:", err.message));
+        };
+
         const moveProject = (index, direction) => {
           const currentList = projects
-            .filter(p => p.archived === showArchived)
+            .filter(p => p.status === currentView)
             .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
 
           const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -350,10 +376,11 @@
             category: 'None',
             priority: 0,
             orderIndex: maxOrder + 100,
-            status: '',
+            status: 'active',
+            completedAt: null,
+            briefStatus: '',
             nextSteps: [],
-            notes: [],
-            archived: false
+            notes: []
           };
 
           if (isDemoMode) {
@@ -381,7 +408,8 @@
           getProjectDoc(id).delete().catch(err => console.error("Deletion failed:", err.message));
         };
 
-        const purgeProjectCompleted = (projectId) => {
+        // TASK-LEVEL PURGE: Clears finished sub-tasks inside a project
+        const purgeProjectSubSteps = (projectId) => {
           const target = projects.find(p => p.id === projectId);
           if (!target) return;
 
@@ -404,39 +432,36 @@
           }, { merge: true });
         };
 
-        const purgeAllCompleted = () => {
-          let totalCount = 0;
-          projects.forEach(p => {
-            totalCount += p.nextSteps.filter(s => s.done).length;
-            totalCount += p.notes.filter(n => n.done).length;
+        // BULK MAINTENANCE PURGE: Clears projects completed > 30 days ago
+        const purgeOldCompletedProjects = () => {
+          const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+          const now = Date.now();
+
+          const oldCompleted = projects.filter(p => {
+            if (p.status !== 'completed') return false;
+            if (!p.completedAt) return true; // Legacy completed without date
+            return (now - new Date(p.completedAt).getTime()) > THIRTY_DAYS_MS;
           });
 
-          if (totalCount === 0) {
-            alert("No completed steps found to purge.");
+          if (oldCompleted.length === 0) {
+            alert("No completed projects older than 30 days were found.");
             return;
           }
 
-          if (!confirm(`Permanently remove ${totalCount} completed items across all active projects?`)) return;
+          if (!confirm(`Permanently remove ${oldCompleted.length} completed projects older than 30 days?`)) return;
 
           if (isDemoMode) {
-            setProjects(prev => prev.map(p => ({
-              ...p,
-              nextSteps: p.nextSteps.filter(s => !s.done),
-              notes: p.notes.filter(n => !n.done)
-            })));
+            const oldIds = oldCompleted.map(p => p.id);
+            setProjects(prev => prev.filter(p => !oldIds.includes(p.id)));
             return;
           }
 
           if (!user) return;
           const batch = db.batch();
-          projects.forEach(p => {
-            const docRef = getProjectDoc(p.id);
-            batch.update(docRef, {
-              nextSteps: p.nextSteps.filter(s => !s.done),
-              notes: p.notes.filter(n => !n.done)
-            });
+          oldCompleted.forEach(p => {
+            batch.delete(getProjectDoc(p.id));
           });
-          batch.commit().catch(err => console.error("Global purge failed:", err.message));
+          batch.commit().catch(err => console.error("Bulk purge failed:", err.message));
         };
 
         const toggleShowCompleted = (key) => {
@@ -493,7 +518,7 @@
                   setFocusId(newId);
                   updateProjectField(project.id, field, newList);
                 }} 
-                className="text-xs text-amber-500 hover:text-amber-400 font-bold transition flex items-center gap-1 mt-1.5 py-0.5 opacity-90 hover:opacity-100"
+                className="text-xs text-amber-600 hover:text-amber-500 font-bold transition flex items-center gap-1 mt-1.5 py-0.5 opacity-90 hover:opacity-100"
               >
                 + Add Step
               </button>
@@ -529,8 +554,8 @@
             <div className={`min-h-screen flex flex-col lg:flex-row font-sans ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
               <div className="flex-1 p-8 sm:p-12 lg:p-16 flex flex-col justify-between items-start max-w-7xl mx-auto w-full">
                 <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 text-xs font-semibold mb-6">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 text-xs font-semibold mb-6">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
                     ADHD Focused Workspace Architecture
                   </div>
                   <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-4">
@@ -559,7 +584,7 @@
 
                   <button 
                     onClick={() => setIsDemoMode(true)}
-                    className="w-full py-3 px-4 bg-transparent hover:bg-amber-500/10 text-amber-500 font-bold rounded-lg border border-amber-500/40 transition text-sm"
+                    className="w-full py-3 px-4 bg-transparent hover:bg-amber-500/10 text-amber-600 font-bold rounded-lg border border-amber-500/40 transition text-sm"
                   >
                     Enter Sandbox Demo Mode
                   </button>
@@ -569,8 +594,14 @@
           );
         }
 
+        const counts = {
+          active: projects.filter(p => p.status === 'active').length,
+          paused: projects.filter(p => p.status === 'paused').length,
+          completed: projects.filter(p => p.status === 'completed').length,
+        };
+
         const displayedProjects = projects
-          .filter(p => p.archived === showArchived)
+          .filter(p => p.status === currentView)
           .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
 
         return (
@@ -595,6 +626,39 @@
                   </div>
 
                   <div className="flex flex-wrap gap-2 items-center">
+                    {/* GLOBAL VIEW NAVIGATION TABS */}
+                    <div className={`flex items-center p-1 rounded-lg border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300'}`}>
+                      <button
+                        onClick={() => setCurrentView('active')}
+                        className={`px-3.5 py-1.5 text-xs font-bold rounded-md transition ${currentView === 'active' ? 'bg-amber-500 text-slate-950 shadow' : (isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')}`}
+                      >
+                        Active ({counts.active})
+                      </button>
+                      <button
+                        onClick={() => setCurrentView('paused')}
+                        className={`px-3.5 py-1.5 text-xs font-bold rounded-md transition ${currentView === 'paused' ? 'bg-amber-500 text-slate-950 shadow' : (isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')}`}
+                      >
+                        Paused ({counts.paused})
+                      </button>
+                      <button
+                        onClick={() => setCurrentView('completed')}
+                        className={`px-3.5 py-1.5 text-xs font-bold rounded-md transition ${currentView === 'completed' ? 'bg-amber-500 text-slate-950 shadow' : (isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')}`}
+                      >
+                        Completed ({counts.completed})
+                      </button>
+                    </div>
+
+                    {/* BULK PURGE IN COMPLETED VIEW ONLY */}
+                    {currentView === 'completed' && (
+                      <button 
+                        onClick={purgeOldCompletedProjects}
+                        className={`px-3 py-1.5 text-xs rounded-lg font-bold border transition ${isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-300 hover:text-amber-400' : 'border-slate-300 bg-white text-slate-700 hover:text-amber-600'}`}
+                        title="Purge completed projects older than 30 days"
+                      >
+                        🧹 Purge > 30 Days
+                      </button>
+                    )}
+
                     {/* Dark/Light Mode Switcher */}
                     <button 
                       onClick={toggleTheme}
@@ -602,20 +666,6 @@
                       title="Toggle visual theme"
                     >
                       {isDarkMode ? '☀️ Light' : '🌙 Dark'}
-                    </button>
-
-                    <button 
-                      onClick={purgeAllCompleted}
-                      className={`px-3.5 py-1.5 text-xs rounded-lg font-bold border transition ${isDarkMode ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:text-amber-400 hover:border-amber-500/40' : 'border-slate-300 bg-white text-slate-700 hover:text-amber-600 hover:border-amber-500'}`}
-                    >
-                      🧹 Purge All Completed
-                    </button>
-
-                    <button 
-                      onClick={() => setShowArchived(!showArchived)} 
-                      className={`px-3.5 py-1.5 text-xs rounded-lg font-bold border transition ${isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white' : 'border-slate-300 bg-white text-slate-700 hover:text-slate-950'}`}
-                    >
-                      {showArchived ? "View Active" : "View Archived"}
                     </button>
 
                     {!isDemoMode && (
@@ -631,94 +681,111 @@
 
                 {/* MOBILE VIEW */}
                 <div className="block md:hidden space-y-3">
-                  {displayedProjects.map((p, index) => {
-                    const colorScheme = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
-                    const priorityMeta = PRIORITIES.find(pr => pr.level === p.priority) || PRIORITIES[0];
-                    const isExpanded = !!expandedMobileIds[p.id];
+                  {displayedProjects.length === 0 ? (
+                    <div className={`p-8 text-center text-sm font-semibold rounded-xl border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-white border-slate-200 text-slate-400'}`}>
+                      No {currentView} projects found.
+                    </div>
+                  ) : (
+                    displayedProjects.map((p, index) => {
+                      const colorScheme = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
+                      const isExpanded = !!expandedMobileIds[p.id];
 
-                    return (
-                      <div key={p.id} className={`rounded-xl border shadow-sm overflow-hidden border-l-4 ${colorScheme.border} ${isDarkMode ? colorScheme.darkBg + ' border-slate-800' : colorScheme.lightBg + ' border-slate-300'}`}>
-                        <div className="p-4 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 pr-1">
-                            <div className="flex flex-col text-[10px] text-slate-400 font-bold">
-                              <button onClick={() => moveProject(index, 'up')} disabled={index === 0} className="hover:text-amber-500 disabled:opacity-20 px-1 py-0.5">▲</button>
-                              <button onClick={() => moveProject(index, 'down')} disabled={index === displayedProjects.length - 1} className="hover:text-amber-500 disabled:opacity-20 px-1 py-0.5">▼</button>
-                            </div>
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <AutoSaveInput 
-                              value={p.name} 
-                              placeholder="Project Name..."
-                              onSave={(v) => updateProjectField(p.id, 'name', v)} 
-                              className={`w-full font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`} 
-                            />
-                            <div className="flex items-center gap-2 mt-2">
-                              <select 
-                                value={p.priority} 
-                                onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
-                                className={`text-xs px-2 py-1 rounded font-bold border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-800'}`}
-                              >
-                                {PRIORITIES.map(opt => <option key={opt.level} value={opt.level}>{opt.label}</option>)}
-                              </select>
-                              <select 
-                                value={p.category || 'None'} 
-                                onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
-                                className={`text-xs px-2 py-1 rounded font-semibold border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-800'}`}
-                              >
-                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                              </select>
-                            </div>
-                          </div>
-
-                          <button 
-                            onClick={() => setExpandedMobileIds(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
-                            className={`p-2 rounded-lg font-bold text-sm border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-300 text-slate-700'}`}
-                          >
-                            {isExpanded ? '▲' : '▼'}
-                          </button>
-                        </div>
-
-                        {isExpanded && (
-                          <div className={`p-4 border-t space-y-4 ${isDarkMode ? 'border-slate-800/80 bg-slate-950/60' : 'border-slate-200 bg-white/80'}`}>
-                            <div>
-                              <div className="text-[11px] font-black uppercase tracking-wider text-amber-500 mb-1">Status Brief</div>
-                              <AutoResizeTextarea 
-                                value={p.status || ''} 
-                                placeholder="..."
-                                onSave={(v) => updateProjectField(p.id, 'status', v)} 
-                                className={`w-full text-sm leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
-                              />
-                            </div>
-
-                            <div>
-                              <div className="text-[11px] font-black uppercase tracking-wider text-amber-500 mb-1">Next Steps</div>
-                              {renderList(p, 'nextSteps')}
-                            </div>
-
-                            <div>
-                              <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-1">Notes</div>
-                              {renderList(p, 'notes', true)}
-                            </div>
-
-                            <div className={`pt-2 border-t flex items-center justify-between text-xs ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-                              <button onClick={() => purgeProjectCompleted(p.id)} className="text-slate-500 hover:text-amber-500 font-semibold">
-                                Clean Done
-                              </button>
-                              <div className="flex gap-3">
-                                <button onClick={() => updateProjectField(p.id, 'archived', !p.archived)} className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-semibold">
-                                  {p.archived ? "Unarchive" : "Archive"}
-                                </button>
-                                <button onClick={() => deleteProject(p.id)} className="text-slate-500 hover:text-red-500 font-semibold">
-                                  Delete
-                                </button>
+                      return (
+                        <div key={p.id} className={`rounded-xl border shadow-sm overflow-hidden border-l-4 ${colorScheme.border} ${isDarkMode ? colorScheme.darkBg + ' border-slate-800' : colorScheme.lightBg + ' border-slate-300'}`}>
+                          <div className="p-4 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 pr-1">
+                              <div className="flex flex-col text-[10px] text-slate-400 font-bold">
+                                <button onClick={() => moveProject(index, 'up')} disabled={index === 0} className="hover:text-amber-500 disabled:opacity-20 px-1 py-0.5">▲</button>
+                                <button onClick={() => moveProject(index, 'down')} disabled={index === displayedProjects.length - 1} className="hover:text-amber-500 disabled:opacity-20 px-1 py-0.5">▼</button>
                               </div>
                             </div>
+
+                            <div className="flex-1 min-w-0">
+                              <AutoSaveInput 
+                                value={p.name} 
+                                placeholder="Project Name..."
+                                onSave={(v) => updateProjectField(p.id, 'name', v)} 
+                                className={`w-full font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`} 
+                              />
+                              <div className="flex items-center gap-2 mt-2">
+                                <select 
+                                  value={p.priority} 
+                                  onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
+                                  className={`text-xs px-2 py-1 rounded font-bold border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-800'}`}
+                                >
+                                  {PRIORITIES.map(opt => <option key={opt.level} value={opt.level}>{opt.label}</option>)}
+                                </select>
+                                <select 
+                                  value={p.category || 'None'} 
+                                  onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
+                                  className={`text-xs px-2 py-1 rounded font-semibold border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-800'}`}
+                                >
+                                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                              </div>
+                            </div>
+
+                            <button 
+                              onClick={() => setExpandedMobileIds(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
+                              className={`p-2 rounded-lg font-bold text-sm border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-300 text-slate-700'}`}
+                            >
+                              {isExpanded ? '▲' : '▼'}
+                            </button>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+
+                          {isExpanded && (
+                            <div className={`p-4 border-t space-y-4 ${isDarkMode ? 'border-slate-800/80 bg-slate-950/60' : 'border-slate-200 bg-white/80'}`}>
+                              <div>
+                                <div className="text-[11px] font-black uppercase tracking-wider text-amber-600 mb-1">Status Brief</div>
+                                <AutoResizeTextarea 
+                                  value={p.briefStatus || ''} 
+                                  placeholder="..."
+                                  onSave={(v) => updateProjectField(p.id, 'briefStatus', v)} 
+                                  className={`w-full text-sm leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                                />
+                              </div>
+
+                              <div>
+                                <div className="text-[11px] font-black uppercase tracking-wider text-amber-600 mb-1">Next Steps</div>
+                                {renderList(p, 'nextSteps')}
+                              </div>
+
+                              <div>
+                                <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-1">Notes</div>
+                                {renderList(p, 'notes', true)}
+                              </div>
+
+                              {/* ACTIONS FOOTER */}
+                              <div className={`pt-2 border-t flex items-center justify-between text-xs ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                                <button onClick={() => purgeProjectSubSteps(p.id)} className="text-slate-500 hover:text-amber-500 font-semibold">
+                                  🧹 Purge Done Steps
+                                </button>
+                                
+                                <div className="flex gap-2">
+                                  {currentView === 'active' && (
+                                    <>
+                                      <button onClick={() => setProjectStatus(p.id, 'paused')} className="text-amber-600 font-bold">Pause</button>
+                                      <button onClick={() => setProjectStatus(p.id, 'completed')} className="text-emerald-600 font-bold">Mark Complete</button>
+                                    </>
+                                  )}
+                                  {currentView === 'paused' && (
+                                    <>
+                                      <button onClick={() => setProjectStatus(p.id, 'active')} className="text-blue-600 font-bold">Resume</button>
+                                      <button onClick={() => setProjectStatus(p.id, 'completed')} className="text-emerald-600 font-bold">Mark Complete</button>
+                                    </>
+                                  )}
+                                  {currentView === 'completed' && (
+                                    <button onClick={() => setProjectStatus(p.id, 'active')} className="text-blue-600 font-bold">Reactivate</button>
+                                  )}
+                                  <button onClick={() => deleteProject(p.id)} className="text-red-500 font-bold ml-1">Delete</button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
 
                 {/* DESKTOP HIGH-DENSITY TABLE */}
@@ -734,124 +801,174 @@
                       </tr>
                     </thead>
                     <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/80' : 'divide-slate-200'}`}>
-                      {displayedProjects.map((p, index) => {
-                        const colorScheme = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
-                        const priorityMeta = PRIORITIES.find(pr => pr.level === p.priority) || PRIORITIES[0];
+                      {displayedProjects.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="p-8 text-center text-sm font-semibold text-slate-400">
+                            No {currentView} projects found.
+                          </td>
+                        </tr>
+                      ) : (
+                        displayedProjects.map((p, index) => {
+                          const colorScheme = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
+                          const priorityMeta = PRIORITIES.find(pr => pr.level === p.priority) || PRIORITIES[0];
 
-                        return (
-                          <tr key={p.id} className={`transition group border-b border-l-4 ${colorScheme.border} ${isDarkMode ? colorScheme.darkBg + ' border-slate-800 hover:bg-slate-800/50' : colorScheme.lightBg + ' border-slate-200 hover:bg-slate-100'}`}>
-                            
-                            {/* Project Name Cell */}
-                            <td className="p-3.5 align-top">
-                              <div className="flex items-start gap-2">
-                                <div className="flex flex-col text-[10px] text-slate-400 font-bold pt-0.5 opacity-40 group-hover:opacity-100 transition">
-                                  <button 
-                                    onClick={() => moveProject(index, 'up')} 
-                                    disabled={index === 0} 
-                                    className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20"
-                                    title="Move project up"
-                                  >
-                                    ▲
-                                  </button>
-                                  <button 
-                                    onClick={() => moveProject(index, 'down')} 
-                                    disabled={index === displayedProjects.length - 1} 
-                                    className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20"
-                                    title="Move project down"
-                                  >
-                                    ▼
-                                  </button>
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                  <AutoSaveInput 
-                                    value={p.name} 
-                                    placeholder="Project Name..."
-                                    onSave={(v) => updateProjectField(p.id, 'name', v)} 
-                                    className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`} 
-                                  />
-
-                                  <div className="mt-2 flex items-center gap-2 text-[11px]">
+                          return (
+                            <tr key={p.id} className={`transition group border-b border-l-4 ${colorScheme.border} ${isDarkMode ? colorScheme.darkBg + ' border-slate-800 hover:bg-slate-800/50' : colorScheme.lightBg + ' border-slate-200 hover:bg-slate-100'}`}>
+                              
+                              {/* Project Name Cell */}
+                              <td className="p-3.5 align-top">
+                                <div className="flex items-start gap-2">
+                                  <div className="flex flex-col text-[10px] text-slate-400 font-bold pt-0.5 opacity-40 group-hover:opacity-100 transition">
                                     <button 
-                                      onClick={() => purgeProjectCompleted(p.id)}
-                                      className="text-slate-400 hover:text-amber-500 transition font-semibold"
-                                      title="Purge completed items in this project"
+                                      onClick={() => moveProject(index, 'up')} 
+                                      disabled={index === 0} 
+                                      className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20"
+                                      title="Move project up"
                                     >
-                                      🧹 Purge
+                                      ▲
                                     </button>
-                                    <span className="text-slate-400">•</span>
                                     <button 
-                                      onClick={() => updateProjectField(p.id, 'archived', !p.archived)} 
-                                      className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition font-semibold"
+                                      onClick={() => moveProject(index, 'down')} 
+                                      disabled={index === displayedProjects.length - 1} 
+                                      className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20"
+                                      title="Move project down"
                                     >
-                                      {p.archived ? "Unarchive" : "Archive"}
-                                    </button>
-                                    <span className="text-slate-400">•</span>
-                                    <button 
-                                      onClick={() => deleteProject(p.id)} 
-                                      className="text-slate-400 hover:text-red-500 transition font-semibold"
-                                    >
-                                      Delete
+                                      ▼
                                     </button>
                                   </div>
+
+                                  <div className="flex-1 min-w-0">
+                                    <AutoSaveInput 
+                                      value={p.name} 
+                                      placeholder="Project Name..."
+                                      onSave={(v) => updateProjectField(p.id, 'name', v)} 
+                                      className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`} 
+                                    />
+
+                                    {/* CLEAN PROJECT ACTIONS ROW */}
+                                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+                                      {currentView === 'active' && (
+                                        <>
+                                          <button 
+                                            onClick={() => setProjectStatus(p.id, 'paused')}
+                                            className="text-amber-600 hover:text-amber-500 transition"
+                                          >
+                                            Pause
+                                          </button>
+                                          <span className="text-slate-400">•</span>
+                                          <button 
+                                            onClick={() => setProjectStatus(p.id, 'completed')}
+                                            className="text-emerald-600 hover:text-emerald-500 transition"
+                                          >
+                                            Mark Complete
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {currentView === 'paused' && (
+                                        <>
+                                          <button 
+                                            onClick={() => setProjectStatus(p.id, 'active')}
+                                            className="text-blue-600 hover:text-blue-500 transition"
+                                          >
+                                            Resume
+                                          </button>
+                                          <span className="text-slate-400">•</span>
+                                          <button 
+                                            onClick={() => setProjectStatus(p.id, 'completed')}
+                                            className="text-emerald-600 hover:text-emerald-500 transition"
+                                          >
+                                            Mark Complete
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {currentView === 'completed' && (
+                                        <button 
+                                          onClick={() => setProjectStatus(p.id, 'active')}
+                                          className="text-blue-600 hover:text-blue-500 transition"
+                                        >
+                                          Reactivate
+                                        </button>
+                                      )}
+
+                                      <span className="text-slate-400">•</span>
+                                      <button 
+                                        onClick={() => deleteProject(p.id)} 
+                                        className="text-slate-400 hover:text-red-500 transition"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
+                              </td>
 
-                            {/* Status Brief */}
-                            <td className="p-3.5 align-top">
-                              <AutoResizeTextarea 
-                                value={p.status || ''} 
-                                placeholder="..."
-                                onSave={(v) => updateProjectField(p.id, 'status', v)} 
-                                className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
-                              />
-                            </td>
+                              {/* Status Brief */}
+                              <td className="p-3.5 align-top">
+                                <AutoResizeTextarea 
+                                  value={p.briefStatus || ''} 
+                                  placeholder="..."
+                                  onSave={(v) => updateProjectField(p.id, 'briefStatus', v)} 
+                                  className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                                />
+                              </td>
 
-                            {/* Next Steps */}
-                            <td className={`p-3.5 align-top border-r-2 ${isDarkMode ? 'border-slate-800 bg-slate-950/20' : 'border-slate-200 bg-white/40'}`}>
-                              {renderList(p, 'nextSteps')}
-                            </td>
-
-                            {/* Details (Category & Priority) */}
-                            <td className="p-3.5 align-top">
-                              <div className="space-y-3">
-                                <div>
-                                  <label className="text-[10px] uppercase font-mono text-slate-400 block mb-1">Priority</label>
-                                  <select 
-                                    value={p.priority} 
-                                    onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
-                                    className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer ${isDarkMode ? priorityMeta.badgeDark : priorityMeta.badgeLight}`}
+                              {/* Next Steps */}
+                              <td className={`p-3.5 align-top border-r-2 ${isDarkMode ? 'border-slate-800 bg-slate-950/20' : 'border-slate-200 bg-white/40'}`}>
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-[10px] font-mono uppercase text-slate-400">Checklist</span>
+                                  <button 
+                                    onClick={() => purgeProjectSubSteps(p.id)}
+                                    className="text-[10px] text-slate-400 hover:text-amber-500 font-semibold transition"
+                                    title="Purge finished sub-steps in this project"
                                   >
-                                    {PRIORITIES.map(opt => <option key={opt.level} value={opt.level}>{opt.label}</option>)}
-                                  </select>
+                                    🧹 Purge Done Steps
+                                  </button>
                                 </div>
+                                {renderList(p, 'nextSteps')}
+                              </td>
 
-                                <div>
-                                  <label className="text-[10px] uppercase font-mono text-slate-400 block mb-1">Category Domain</label>
-                                  <select 
-                                    value={p.category || 'None'} 
-                                    onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
-                                    className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer ${colorScheme.badge}`}
-                                  >
-                                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                  </select>
+                              {/* Details (Category & Priority) */}
+                              <td className="p-3.5 align-top">
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="text-[10px] uppercase font-mono text-slate-400 block mb-1">Priority</label>
+                                    <select 
+                                      value={p.priority} 
+                                      onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
+                                      className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer ${isDarkMode ? priorityMeta.badgeDark : priorityMeta.badgeLight}`}
+                                    >
+                                      {PRIORITIES.map(opt => <option key={opt.level} value={opt.level}>{opt.label}</option>)}
+                                    </select>
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[10px] uppercase font-mono text-slate-400 block mb-1">Category Domain</label>
+                                    <select 
+                                      value={p.category || 'None'} 
+                                      onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
+                                      className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer ${colorScheme.badge}`}
+                                    >
+                                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
+                              </td>
 
-                            {/* Notes */}
-                            <td className="p-3.5 align-top">
-                              {renderList(p, 'notes', true)}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                              {/* Notes */}
+                              <td className="p-3.5 align-top">
+                                {renderList(p, 'notes', true)}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
 
-                {!showArchived && (
+                {currentView === 'active' && (
                   <button 
                     onClick={createProject} 
                     className="w-full mt-4 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm rounded-xl shadow transition tracking-wide"
