@@ -1,6 +1,6 @@
-<!-- Version 1.3.0 -->
+<!-- Version 1.4.0 - Master Consolidated Release -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,46 +9,65 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = { darkMode: 'class' };
+    tailwind.config = { 
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fffbebe6',
+              500: '#f59e0b',
+              600: '#d97706',
+              900: '#78350f',
+            }
+          }
+        }
+      }
+    };
   </script>
 
-  <!-- React 18 & Babel CDN -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- React 18 & Babel Standalone -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Firebase 10 JS SDK (Compat Mode) -->
+  <!-- Firebase 10 Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <style>
     textarea { resize: none; overflow: hidden; }
-    /* Hide scrollbar for cleaner mobile view but allow scrolling */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .dark ::-webkit-scrollbar-thumb { background: #334155; }
+    
+    /* Clean contenteditable & textarea focus states */
+    textarea:focus, input:focus, select:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
   </style>
 </head>
-<body class="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen font-sans transition-colors duration-200">
   
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef, Component } = React;
+    const { useState, useEffect, useRef, useLayoutEffect, Component } = React;
 
     // =========================================================================
     // 1. FIREBASE CONFIGURATION
     // =========================================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyCiQU2ilhdlJkxD7-kWHl6lkO2LKQYnC7E",
-  authDomain: "master-tracker-7b104.firebaseapp.com",
-  projectId: "master-tracker-7b104",
-  storageBucket: "master-tracker-7b104.firebasestorage.app",
-  messagingSenderId: "706171177063",
-  appId: "1:706171177063:web:ac2415157560969c5a6cc2"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyCiQU2ilhdlJkxD7-kWHl6lkO2LKQYnC7E",
+      authDomain: "master-tracker-7b104.firebaseapp.com",
+      projectId: "master-tracker-7b104",
+      storageBucket: "master-tracker-7b104.firebasestorage.app",
+      messagingSenderId: "706171177063",
+      appId: "1:706171177063:web:ac2415157560969c5a6cc2"
+    };
 
     let db = null;
     let auth = null;
@@ -64,21 +83,64 @@ const firebaseConfig = {
         isFirebaseConfigured = true;
 
         db.enableMultiTabIndexedDbPersistence().catch((err) => {
-          if (err.code === 'failed-precondition') db.enablePersistence();
+          if (err.code === 'failed-precondition') db.enablePersistence().catch(() => {});
         });
       }
     } catch (err) {
-      console.warn("Firebase initialization error:", err);
+      console.warn("Firebase initialization notice:", err);
     }
 
-    // --- CONSTANTS & STYLING ---
-    const CATEGORIES = ['Work', 'Personal', 'Projects', 'None'];
+    // --- CONSTANTS & SCHEMAS ---
+    const MAX_NOTE_LENGTH = 280; // Character limit guardrail for notes/sub-items
+
+    const CATEGORIES = ['Work', 'Personal', 'Career', 'Projects', 'Financial', 'Learning', 'Family', 'Spiritual', 'None'];
 
     const CATEGORY_COLORS = {
-      Work: { border: 'border-blue-500', badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 border-blue-300' },
-      Personal: { border: 'border-emerald-500', badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border-emerald-300' },
-      Projects: { border: 'border-purple-500', badge: 'bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200 border-purple-300' },
-      None: { border: 'border-slate-400', badge: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300' }
+      Work: { 
+        border: 'border-l-blue-500', 
+        badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 border-blue-300', 
+        tint: 'bg-blue-50/40 dark:bg-blue-950/20' 
+      },
+      Personal: { 
+        border: 'border-l-emerald-500', 
+        badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border-emerald-300', 
+        tint: 'bg-emerald-50/40 dark:bg-emerald-950/20' 
+      },
+      Career: { 
+        border: 'border-l-orange-500', 
+        badge: 'bg-orange-100 text-orange-800 dark:bg-orange-900/60 dark:text-orange-200 border-orange-300', 
+        tint: 'bg-orange-50/40 dark:bg-orange-950/20' 
+      },
+      Projects: { 
+        border: 'border-l-purple-500', 
+        badge: 'bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200 border-purple-300', 
+        tint: 'bg-purple-50/40 dark:bg-purple-950/20' 
+      },
+      Financial: { 
+        border: 'border-l-amber-500', 
+        badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border-amber-300', 
+        tint: 'bg-amber-50/40 dark:bg-amber-950/20' 
+      },
+      Learning: { 
+        border: 'border-l-pink-500', 
+        badge: 'bg-pink-100 text-pink-800 dark:bg-pink-900/60 dark:text-pink-200 border-pink-300', 
+        tint: 'bg-pink-50/40 dark:bg-pink-950/20' 
+      },
+      Family: { 
+        border: 'border-l-fuchsia-500', 
+        badge: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/60 dark:text-fuchsia-200 border-fuchsia-300', 
+        tint: 'bg-fuchsia-50/40 dark:bg-fuchsia-950/20' 
+      },
+      Spiritual: { 
+        border: 'border-l-teal-500', 
+        badge: 'bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-200 border-teal-300', 
+        tint: 'bg-teal-50/40 dark:bg-teal-950/20' 
+      },
+      None: { 
+        border: 'border-l-slate-400', 
+        badge: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300', 
+        tint: 'bg-slate-50/30 dark:bg-slate-900/40' 
+      }
     };
 
     const PRIORITIES = [
@@ -87,30 +149,66 @@ const firebaseConfig = {
       { level: 2, label: '🚨 High', badge: 'bg-red-600 text-white font-bold' }
     ];
 
+    const DEMO_PROJECTS = [
+      {
+        id: 'demo-1',
+        name: 'Q3 Strategic Roadmap',
+        briefStatus: 'Executing core milestones and cross-team alignment.',
+        category: 'Work',
+        priority: 2,
+        status: 'active',
+        orderIndex: 100,
+        nextSteps: [
+          { id: 'd1-1', text: 'Finalize quarterly deliverables with team leads', completed: false, indent: 0 },
+          { id: 'd1-2', text: 'Publish status update on workspace', completed: true, indent: 0 }
+        ],
+        notes: [{ id: 'dn1-1', text: 'Keep focus on low-friction execution.', completed: false, indent: 0 }]
+      },
+      {
+        id: 'demo-2',
+        name: 'Drip Irrigation Setup',
+        briefStatus: 'Planning garden bed perimeter and supply list.',
+        category: 'Personal',
+        priority: 1,
+        status: 'active',
+        orderIndex: 200,
+        nextSteps: [{ id: 'd2-1', text: 'Measure perimeter and order timer valve', completed: false, indent: 0 }],
+        notes: [{ id: 'dn2-1', text: 'Pressure regulator needed at tap connection.', completed: false, indent: 0 }]
+      }
+    ];
+
     const normalizeSteps = (items) => {
       if (!Array.isArray(items)) return [];
       return items.map((item, idx) => {
         if (!item) return { id: `step-${Date.now()}-${idx}`, text: '', completed: false, indent: 0 };
-        if (typeof item === 'string') return { id: `step-${Date.now()}-${idx}`, text: item, completed: false, indent: 0 };
+        if (typeof item === 'string') return { id: `step-${Date.now()}-${idx}`, text: item.slice(0, MAX_NOTE_LENGTH), completed: false, indent: 0 };
         return {
           id: item.id || `step-${Date.now()}-${idx}`,
-          text: item.text || '',
-          completed: !!item.completed,
-          indent: typeof item.indent === 'number' ? item.indent : 0
+          text: (item.text || '').slice(0, MAX_NOTE_LENGTH),
+          completed: !!(item.completed || item.done),
+          indent: typeof item.indent === 'number' ? Math.max(0, Math.min(2, item.indent)) : 0
         };
       });
     };
 
-    // --- REUSABLE INPUT COMPONENTS ---
+    // --- REUSABLE INPUT COMPONENTS WITH GUARDRAILS ---
     const AutoSaveInput = ({ value, onSave, placeholder, className, onFocus, onBlur }) => {
       const [val, setVal] = useState(value || '');
       useEffect(() => setVal(value || ''), [value]);
+
+      const handlePaste = (e) => {
+        e.preventDefault();
+        const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
+        setVal(plainText);
+      };
+
       return (
         <input
           type="text"
           value={val}
           placeholder={placeholder}
           onChange={(e) => setVal(e.target.value)}
+          onPaste={handlePaste}
           onBlur={(e) => { onSave(val); if (onBlur) onBlur(e); }}
           onFocus={onFocus}
           className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 ${className}`}
@@ -118,33 +216,59 @@ const firebaseConfig = {
       );
     };
 
-    const AutoResizeTextarea = ({ value, onSave, placeholder, className }) => {
+    const AutoResizeTextarea = ({ value, onSave, placeholder, className, maxLength }) => {
       const [val, setVal] = useState(value || '');
       const textareaRef = useRef(null);
+
       useEffect(() => setVal(value || ''), [value]);
-      useEffect(() => {
+
+      useLayoutEffect(() => {
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
           textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
         }
       }, [val]);
+
+      const handlePaste = (e) => {
+        e.preventDefault();
+        const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
+        const target = e.target;
+        const start = target.selectionStart;
+        const end = target.selectionEnd;
+        const currentVal = target.value;
+        let newVal = currentVal.substring(0, start) + plainText + currentVal.substring(end);
+        if (maxLength && newVal.length > maxLength) {
+          newVal = newVal.slice(0, maxLength);
+        }
+        setVal(newVal);
+      };
+
       return (
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          value={val}
-          placeholder={placeholder}
-          onChange={(e) => setVal(e.target.value)}
-          onBlur={() => onSave(val)}
-          className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 ${className}`}
-        />
+        <div className="relative w-full">
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={val}
+            maxLength={maxLength}
+            placeholder={placeholder}
+            onChange={(e) => setVal(e.target.value)}
+            onPaste={handlePaste}
+            onBlur={() => { if (val !== value) onSave(val); }}
+            className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 leading-relaxed ${className}`}
+          />
+          {maxLength && val.length > maxLength * 0.8 && (
+            <span className={`text-[10px] font-mono absolute right-0 -bottom-4 ${val.length >= maxLength ? 'text-red-500 font-bold' : 'text-slate-400'}`}>
+              {val.length}/{maxLength}
+            </span>
+          )}
+        </div>
       );
     };
 
     // --- MAIN APP COMPONENT ---
     function App() {
       const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('tracker_theme') === 'dark');
-      const [currentView, setCurrentView] = useState('active');
+      const [currentView, setCurrentView] = useState('active'); // active | paused | completed
       const [projects, setProjects] = useState([]);
       const [loading, setLoading] = useState(true);
       const [user, setUser] = useState(null);
@@ -153,9 +277,13 @@ const firebaseConfig = {
       const [isOnline, setIsOnline] = useState(navigator.onLine);
       const [hasPendingWrites, setHasPendingWrites] = useState(false);
 
-      // Mobile Layout Management
+      // Filters & Reordering
+      const [priorityFilter, setPriorityFilter] = useState('all');
+      const [sortBy, setSortBy] = useState('manual'); // manual | priority-desc | priority-asc
+
+      // Mobile UI States
       const [expandedProjectId, setExpandedProjectId] = useState(null);
-      const [activeStepId, setActiveStepId] = useState(null); // Tracks which sub-step has the mobile format ribbon open
+      const [activeStepId, setActiveStepId] = useState(null);
 
       useEffect(() => {
         const handleOnline = () => setIsOnline(true);
@@ -193,22 +321,44 @@ const firebaseConfig = {
         setLoading(true);
         
         const userProjectsRef = db.collection('users').doc(user.uid).collection('projects');
-        const unsubscribe = userProjectsRef
-          .orderBy('order', 'asc')
-          .onSnapshot((snapshot) => {
-            setHasPendingWrites(snapshot.metadata.hasPendingWrites);
-            const loaded = snapshot.docs.map(doc => ({
+        const unsubscribe = userProjectsRef.onSnapshot((snapshot) => {
+          setHasPendingWrites(snapshot.metadata.hasPendingWrites);
+          let loaded = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
               id: doc.id,
-              ...doc.data(),
-              nextSteps: normalizeSteps(doc.data().nextSteps),
-              notes: normalizeSteps(doc.data().notes)
-            }));
-            setProjects(loaded);
-            setLoading(false);
-          }, (err) => {
-            console.error("Firestore sync error:", err);
-            setLoading(false);
+              name: typeof data.name === 'string' ? data.name : '',
+              briefStatus: typeof data.briefStatus === 'string' ? data.briefStatus : '',
+              category: typeof data.category === 'string' ? data.category : 'None',
+              priority: typeof data.priority === 'number' ? data.priority : 0,
+              status: typeof data.status === 'string' ? data.status : 'active',
+              orderIndex: typeof data.orderIndex === 'number' ? data.orderIndex : (typeof data.order === 'number' ? data.order : 0),
+              nextSteps: normalizeSteps(data.nextSteps),
+              notes: normalizeSteps(data.notes)
+            };
           });
+
+          // Self-healing index fix if items lack orderIndex
+          const needsIndexing = loaded.some(p => p.orderIndex === 0);
+          if (needsIndexing && loaded.length > 0) {
+            const batch = db.batch();
+            loaded.forEach((p, idx) => {
+              if (p.orderIndex === 0) {
+                const docRef = userProjectsRef.doc(p.id);
+                const newIdx = (idx + 1) * 100;
+                batch.update(docRef, { orderIndex: newIdx });
+                p.orderIndex = newIdx;
+              }
+            });
+            batch.commit().catch(() => {});
+          }
+
+          setProjects(loaded);
+          setLoading(false);
+        }, (err) => {
+          console.error("Firestore sync error:", err);
+          setLoading(false);
+        });
 
         return () => unsubscribe();
       }, [user, isDemoMode]);
@@ -225,12 +375,12 @@ const firebaseConfig = {
           await auth.signInWithPopup(provider);
           setIsDemoMode(false);
         } catch (err) {
-          alert("Login failed: " + err.message);
+          alert("Sign in failed: " + err.message);
         }
       };
 
       const handleLogout = () => {
-        if (confirm("Sign out of your account?")) {
+        if (confirm("Sign out of your workspace?")) {
           auth.signOut();
           setIsDemoMode(false);
         }
@@ -238,17 +388,7 @@ const firebaseConfig = {
 
       const enableDemoMode = () => {
         setIsDemoMode(true);
-        setProjects([{
-          id: 'demo-1',
-          name: 'Demo Project Overview',
-          briefStatus: 'Exploring the interface in local demo mode.',
-          category: 'Projects',
-          priority: 1,
-          status: 'active',
-          order: 0,
-          nextSteps: [{ id: 'step-1', text: 'Test checklist features', completed: false, indent: 0 }],
-          notes: []
-        }]);
+        setProjects(DEMO_PROJECTS);
       };
 
       const updateProjectField = (id, field, value) => {
@@ -256,80 +396,101 @@ const firebaseConfig = {
           setProjects(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
           return;
         }
+        if (!user || !db) return;
         db.collection('users').doc(user.uid).collection('projects').doc(id).update({ [field]: value });
       };
 
       const addProject = () => {
-        const minOrder = projects.length > 0 ? Math.min(...projects.map(p => p.order || 0)) - 1 : 0;
+        const maxOrder = projects.length > 0 ? Math.max(...projects.map(p => p.orderIndex || 0)) : 0;
         const newProj = {
           name: 'New Project',
           briefStatus: '',
           category: 'None',
           priority: 0,
           status: 'active',
-          order: minOrder,
+          orderIndex: maxOrder + 100,
           nextSteps: [{ id: `step-${Date.now()}`, text: '', completed: false, indent: 0 }],
           notes: []
         };
 
         if (isDemoMode) {
-          setProjects([{ id: `demo-${Date.now()}`, ...newProj }, ...projects]);
+          setProjects([...projects, { id: `demo-${Date.now()}`, ...newProj }]);
           return;
         }
+        if (!user || !db) return;
         db.collection('users').doc(user.uid).collection('projects').add(newProj);
       };
 
       const setProjectStatus = (id, newStatus) => updateProjectField(id, 'status', newStatus);
 
       const deleteProject = (id) => {
-        if (!confirm('Delete this project permanently?')) return;
+        if (!confirm('Permanently delete this project?')) return;
         if (isDemoMode) {
           setProjects(prev => prev.filter(p => p.id !== id));
           return;
         }
+        if (!user || !db) return;
         db.collection('users').doc(user.uid).collection('projects').doc(id).delete();
       };
 
       const moveProject = (indexInView, direction) => {
-        const viewProjects = projects.filter(p => p.status === currentView);
+        const viewProjects = displayedProjects;
         const targetViewIndex = direction === 'up' ? indexInView - 1 : indexInView + 1;
         if (targetViewIndex < 0 || targetViewIndex >= viewProjects.length) return;
 
         const p1 = viewProjects[indexInView];
         const p2 = viewProjects[targetViewIndex];
-        const order1 = p1.order ?? 0;
-        const order2 = p2.order ?? 0;
+        const tempIndex = p1.orderIndex || 0;
+        const targetIndex = p2.orderIndex || 0;
 
         if (isDemoMode) {
           setProjects(prev => prev.map(p => {
-            if (p.id === p1.id) return { ...p, order: order2 };
-            if (p.id === p2.id) return { ...p, order: order1 };
+            if (p.id === p1.id) return { ...p, orderIndex: targetIndex };
+            if (p.id === p2.id) return { ...p, orderIndex: tempIndex };
             return p;
-          }).sort((a, b) => (a.order || 0) - (b.order || 0)));
+          }));
           return;
         }
 
+        if (!user || !db) return;
         const batch = db.batch();
-        batch.update(db.collection('users').doc(user.uid).collection('projects').doc(p1.id), { order: order2 });
-        batch.update(db.collection('users').doc(user.uid).collection('projects').doc(p2.id), { order: order1 });
+        batch.update(db.collection('users').doc(user.uid).collection('projects').doc(p1.id), { orderIndex: targetIndex });
+        batch.update(db.collection('users').doc(user.uid).collection('projects').doc(p2.id), { orderIndex: tempIndex });
         batch.commit();
       };
 
-      const purgeProjectSubSteps = (projectId) => {
+      // Purge mechanisms
+      const purgeProjectSubSteps = (projectId, field) => {
         const proj = projects.find(p => p.id === projectId);
         if (!proj) return;
-        const remaining = (proj.nextSteps || []).filter(s => !s.completed);
-        updateProjectField(projectId, 'nextSteps', remaining);
+        const remaining = (proj[field] || []).filter(s => !s.completed);
+        updateProjectField(projectId, field, remaining);
       };
 
-      // --- ACCORDION TOGGLE HANDLER ---
+      const bulkPurgeCompletedProjects = () => {
+        const completedProjects = projects.filter(p => p.status === 'completed');
+        if (completedProjects.length === 0) return;
+        if (!confirm(`Delete all ${completedProjects.length} projects in Completed view?`)) return;
+
+        if (isDemoMode) {
+          setProjects(prev => prev.filter(p => p.status !== 'completed'));
+          return;
+        }
+
+        if (!user || !db) return;
+        const batch = db.batch();
+        completedProjects.forEach(p => {
+          batch.delete(db.collection('users').doc(user.uid).collection('projects').doc(p.id));
+        });
+        batch.commit();
+      };
+
       const handleRowClick = (e, projectId) => {
-        // Prevent collapse when interacting with actual inputs, buttons, or select menus
         if (['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
         setExpandedProjectId(prev => prev === projectId ? null : projectId);
       };
 
-      const renderList = (project, field) => {
+      const renderSubList = (project, field) => {
         const items = normalizeSteps(project[field]);
 
         const moveStep = (index, direction) => {
@@ -349,28 +510,40 @@ const firebaseConfig = {
           updateProjectField(project.id, field, updated);
         };
 
-        const handleKeyDown = (e, index) => {
+        const handleKeyDown = (e, index, currentText) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            const newStep = { id: `step-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`, text: '', completed: false, indent: items[index] ? items[index].indent : 0 };
             const updated = [...items];
+            updated[index].text = currentText.slice(0, MAX_NOTE_LENGTH);
+            const newStep = { 
+              id: `step-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`, 
+              text: '', 
+              completed: false, 
+              indent: items[index] ? items[index].indent : 0 
+            };
             updated.splice(index + 1, 0, newStep);
             updateProjectField(project.id, field, updated);
-            setTimeout(() => { const nextInput = document.getElementById(`step-input-${project.id}-${field}-${index + 1}`); if (nextInput) nextInput.focus(); }, 30);
+            setTimeout(() => {
+              const nextInput = document.getElementById(`step-input-${project.id}-${field}-${index + 1}`);
+              if (nextInput) nextInput.focus();
+            }, 30);
           } else if (e.key === 'Tab') {
             e.preventDefault();
             updateIndent(index, e.shiftKey ? 'left' : 'right');
-          } else if (e.key === 'Backspace' && items[index].text === '' && items.length > 1) {
+          } else if (e.key === 'Backspace' && currentText === '' && items.length > 1) {
             e.preventDefault();
             const updated = items.filter((_, i) => i !== index);
             updateProjectField(project.id, field, updated);
-            setTimeout(() => { const prevInput = document.getElementById(`step-input-${project.id}-${field}-${Math.max(0, index - 1)}`); if (prevInput) prevInput.focus(); }, 30);
+            setTimeout(() => {
+              const prevInput = document.getElementById(`step-input-${project.id}-${field}-${Math.max(0, index - 1)}`);
+              if (prevInput) prevInput.focus();
+            }, 30);
           }
         };
 
         const updateStepText = (index, val) => {
           const updated = [...items];
-          updated[index].text = val;
+          updated[index].text = val.slice(0, MAX_NOTE_LENGTH);
           updateProjectField(project.id, field, updated);
         };
 
@@ -384,102 +557,190 @@ const firebaseConfig = {
           updateProjectField(project.id, field, [...items, { id: `step-${Date.now()}`, text: '', completed: false, indent: 0 }]);
         };
 
-        const indentStyles = ['ml-0', 'ml-4 border-l-2 border-slate-300 dark:border-slate-700 pl-2', 'ml-8 border-l-2 border-amber-400/60 pl-2'];
+        const indentStyles = [
+          'ml-0', 
+          'ml-4 border-l-2 border-slate-300 dark:border-slate-700 pl-2', 
+          'ml-8 border-l-2 border-amber-400/80 pl-2'
+        ];
 
         return (
           <div className="space-y-2 md:space-y-1.5">
             {items.map((step, idx) => (
               <div key={step.id || idx} className={`group/step flex flex-col transition-all ${indentStyles[step.indent || 0]}`}>
-                
-                {/* Main Row */}
                 <div className="flex items-start gap-1.5 md:gap-2">
-                  
-                  {/* Desktop Only: Hover reorder buttons */}
                   <div className="hidden md:flex flex-col text-[9px] text-slate-400 opacity-20 group-hover/step:opacity-100 transition pt-1">
                     <button onClick={() => moveStep(idx, 'up')} disabled={idx === 0} className="hover:text-amber-500 leading-none disabled:opacity-10">▲</button>
                     <button onClick={() => moveStep(idx, 'down')} disabled={idx === items.length - 1} className="hover:text-amber-500 leading-none disabled:opacity-10">▼</button>
                   </div>
 
-                  <input type="checkbox" checked={!!step.completed} onChange={() => toggleStepComplete(idx)} className="mt-1.5 md:mt-1 h-4 w-4 md:h-3.5 md:w-3.5 rounded border-slate-300 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" />
-                  
                   <input 
-                    id={`step-input-${project.id}-${field}-${idx}`}
-                    type="text" 
-                    value={step.text} 
-                    onChange={(e) => updateStepText(idx, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(e, idx)}
+                    type="checkbox" 
+                    checked={!!step.completed} 
+                    onChange={() => toggleStepComplete(idx)} 
+                    className="mt-1.5 md:mt-1 h-4 w-4 md:h-3.5 md:w-3.5 rounded border-slate-300 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" 
+                  />
+                  
+                  <AutoResizeTextarea
+                    value={step.text}
+                    maxLength={MAX_NOTE_LENGTH}
+                    placeholder={field === 'nextSteps' ? "Type action step..." : "Type note..."}
+                    onSave={(val) => updateStepText(idx, val)}
                     onFocus={() => setActiveStepId(step.id)}
-                    onBlur={() => setTimeout(() => setActiveStepId(null), 150)}
-                    placeholder={field === 'nextSteps' ? "Type step..." : "Type note..."}
-                    className={`flex-1 text-sm md:text-xs bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 focus:outline-none py-1 md:py-0.5 ${step.completed ? 'line-through text-slate-400' : isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                    className={`text-sm md:text-xs py-0.5 ${step.completed ? 'line-through text-slate-400 dark:text-slate-500' : isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
                   />
                 </div>
 
-                {/* Mobile Only: Action Ribbon (Appears below input when focused) */}
+                {/* Mobile Formatting Ribbon */}
                 {activeStepId === step.id && (
                   <div className="md:hidden flex items-center justify-start gap-3 mt-1 mb-2 ml-6">
-                    <div className="flex bg-slate-200 dark:bg-slate-800 rounded-lg overflow-hidden shadow-sm">
-                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'up'); }} disabled={idx === 0} className="px-4 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 disabled:opacity-30 border-r border-slate-300 dark:border-slate-700">▲</button>
-                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'down'); }} disabled={idx === items.length - 1} className="px-4 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 disabled:opacity-30 border-r border-slate-300 dark:border-slate-700">▼</button>
-                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'left'); }} disabled={(step.indent || 0) === 0} className="px-4 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 disabled:opacity-30 border-r border-slate-300 dark:border-slate-700">⇥ Left</button>
-                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'right'); }} disabled={(step.indent || 0) === 2} className="px-4 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 disabled:opacity-30">Right ⇤</button>
+                    <div className="flex bg-slate-200 dark:bg-slate-800 rounded-lg overflow-hidden shadow-sm text-xs">
+                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'up'); }} disabled={idx === 0} className="px-3 py-1 text-slate-700 dark:text-slate-300 disabled:opacity-30 border-r border-slate-300 dark:border-slate-700">▲ Up</button>
+                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'down'); }} disabled={idx === items.length - 1} className="px-3 py-1 text-slate-700 dark:text-slate-300 disabled:opacity-30 border-r border-slate-300 dark:border-slate-700">▼ Down</button>
+                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'left'); }} disabled={(step.indent || 0) === 0} className="px-3 py-1 text-slate-700 dark:text-slate-300 disabled:opacity-30 border-r border-slate-300 dark:border-slate-700">⇥ Outdent</button>
+                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'right'); }} disabled={(step.indent || 0) === 2} className="px-3 py-1 text-slate-700 dark:text-slate-300 disabled:opacity-30">Indent ⇤</button>
                     </div>
                   </div>
                 )}
               </div>
             ))}
-            <button onClick={addEmptyStep} className="text-[12px] md:text-[11px] text-amber-600 dark:text-amber-400 hover:underline font-semibold mt-2 md:mt-1">+ Add Item</button>
+            <button onClick={addEmptyStep} className="text-[12px] md:text-[11px] text-amber-600 dark:text-amber-400 hover:underline font-semibold mt-2 md:mt-1 inline-flex items-center gap-1">
+              + Add Item
+            </button>
           </div>
         );
       };
 
-      const displayedProjects = projects.filter(p => p.status === currentView);
+      // Filter and Sort Projects
+      const masterViewProjects = projects.filter(p => p.status === currentView);
+
+      const filteredProjects = masterViewProjects.filter(p => {
+        if (priorityFilter !== 'all') {
+          return p.priority === parseInt(priorityFilter, 10);
+        }
+        return true;
+      });
+
+      const displayedProjects = [...filteredProjects].sort((a, b) => {
+        if (sortBy === 'priority-desc') return b.priority - a.priority;
+        if (sortBy === 'priority-asc') return a.priority - b.priority;
+        return (a.orderIndex || 0) - (b.orderIndex || 0);
+      });
+
       const activeCount = projects.filter(p => p.status === 'active').length;
       const pausedCount = projects.filter(p => p.status === 'paused').length;
       const completedCount = projects.filter(p => p.status === 'completed').length;
 
-      // UNAUTHENTICATED / LOGIN GATE
+      const isManualOrderingActive = sortBy === 'manual' && priorityFilter === 'all';
+
+      // =========================================================================
+      // LANDING & LOGIN PAGE (UNAUTHENTICATED)
+      // =========================================================================
       if (!user && !isDemoMode) {
         return (
-          <div className="min-h-screen flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 max-w-md w-full text-center space-y-8 shadow-xl">
-              <div>
-                <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">Personal Project Tracker</h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">A low-friction system for cross-device execution and organization.</p>
+          <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 font-sans">
+            <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+              
+              {/* Left Column: Value Prop */}
+              <div className="md:col-span-7 space-y-6 text-left">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                  ADHD-Friendly Execution
+                </div>
+
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white uppercase leading-tight">
+                  PERSONAL PROJECT TRACKER
+                </h1>
+
+                <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
+                  Cut through administrative clutter. A low-friction, single-board workspace designed to see what’s next, sequence priorities, and execute momentum—across all your devices.
+                </p>
+
+                {/* Feature Highlights Grid */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                    <div className="text-xs font-bold text-amber-400 uppercase">⚡ Zero Friction</div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Auto-saving fields & key shortcuts.</p>
+                  </div>
+                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                    <div className="text-xs font-bold text-emerald-400 uppercase">🎨 Visual Tinting</div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Color-coded category domains.</p>
+                  </div>
+                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                    <div className="text-xs font-bold text-blue-400 uppercase">📊 Single-Board</div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Unified views for Active & Paused.</p>
+                  </div>
+                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                    <div className="text-xs font-bold text-purple-400 uppercase">🧹 Auto Purge</div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">One-click cleanup for done items.</p>
+                  </div>
+                </div>
               </div>
 
-              {!isFirebaseConfigured ? (
-                <div className="p-4 bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 rounded-xl text-left text-xs text-amber-800 dark:text-amber-200">
-                  <p className="font-bold">⚠️ Configuration Missing</p>
-                  <p className="mt-1">Add your <code>firebaseConfig</code> keys to enable authentication.</p>
+              {/* Right Column: Auth Card */}
+              <div className="md:col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 text-center">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Workspace Access</h2>
+                  <p className="text-xs text-slate-400 mt-1">Sign in with your Google account to sync your project board live.</p>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold py-3.5 px-4 rounded-xl shadow transition text-sm">
-                    Sign in with Google
-                  </button>
-                  <div className="relative flex py-2 items-center">
-                    <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-                    <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-semibold uppercase">Or</span>
-                    <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+
+                {!isFirebaseConfigured ? (
+                  <div className="p-4 bg-amber-950/60 border border-amber-800 rounded-xl text-left text-xs text-amber-200">
+                    <p className="font-bold">⚠️ Configuration Notice</p>
+                    <p className="mt-1">Add your Firebase keys to enable live authentication.</p>
                   </div>
-                  <button onClick={enableDemoMode} className="w-full flex items-center justify-center gap-2 bg-transparent border-2 border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 text-slate-700 dark:text-slate-300 font-bold py-3 px-4 rounded-xl transition text-sm">
-                    Try Demo Site
-                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <button 
+                      onClick={handleGoogleLogin} 
+                      className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-bold py-3.5 px-4 rounded-xl shadow transition text-sm"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      </svg>
+                      Sign in with Google
+                    </button>
+
+                    <div className="relative flex py-2 items-center">
+                      <div className="flex-grow border-t border-slate-800"></div>
+                      <span className="flex-shrink-0 mx-3 text-slate-500 text-[10px] font-bold uppercase">Or Test Local</span>
+                      <div className="flex-grow border-t border-slate-800"></div>
+                    </div>
+
+                    <button 
+                      onClick={enableDemoMode} 
+                      className="w-full flex items-center justify-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl transition text-xs"
+                    >
+                      🧪 Launch Interactive Demo Mode
+                    </button>
+                  </div>
+                )}
+
+                <div className="pt-2 text-[11px] text-slate-500">
+                  🔒 Private & Secure. Data indexed directly under your account scope.
                 </div>
-              )}
+              </div>
+
             </div>
           </div>
         );
       }
 
+      // =========================================================================
+      // MAIN DASHBOARD (AUTHENTICATED / DEMO WORKSPACE)
+      // =========================================================================
       return (
-        <div className="max-w-[1440px] mx-auto p-4 md:p-6 space-y-6">
+        <div className="max-w-[1440px] mx-auto p-4 md:p-6 space-y-5">
           
           {/* HEADER BAR */}
           <header className="flex flex-col md:flex-row flex-wrap justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            
             <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-              <h1 className="text-lg md:text-xl font-black tracking-tight text-slate-900 dark:text-white uppercase">PERSONAL PROJECT TRACKER</h1>
+              <h1 className="text-lg md:text-xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
+                PERSONAL PROJECT TRACKER
+              </h1>
               
               {isDemoMode ? (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950/60 dark:text-purple-400">
@@ -487,7 +748,7 @@ const firebaseConfig = {
                 </span>
               ) : !isOnline ? (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-500 text-slate-950 border-amber-600 animate-pulse">
-                  📡 Offline (Queued)
+                  📡 Offline Mode
                 </span>
               ) : hasPendingWrites ? (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-300">
@@ -500,69 +761,117 @@ const firebaseConfig = {
               )}
             </div>
 
-            <div className="flex items-center w-full md:w-auto bg-slate-100 dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800 overflow-x-auto shrink-0">
-              <button onClick={() => setCurrentView('active')} className={`whitespace-nowrap flex-1 md:flex-none px-3 py-1.5 rounded-md text-xs font-bold transition flex justify-center items-center gap-1.5 ${currentView === 'active' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500'}`}>
+            {/* GLOBAL VIEW SWITCHER TABS */}
+            <div className="flex items-center w-full md:w-auto bg-slate-100 dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0">
+              <button 
+                onClick={() => setCurrentView('active')} 
+                className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-md text-xs font-bold transition flex justify-center items-center gap-1.5 ${currentView === 'active' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+              >
                 Active <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{activeCount}</span>
               </button>
-              <button onClick={() => setCurrentView('paused')} className={`whitespace-nowrap flex-1 md:flex-none px-3 py-1.5 rounded-md text-xs font-bold transition flex justify-center items-center gap-1.5 ${currentView === 'paused' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500'}`}>
+              <button 
+                onClick={() => setCurrentView('paused')} 
+                className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-md text-xs font-bold transition flex justify-center items-center gap-1.5 ${currentView === 'paused' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+              >
                 Paused <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{pausedCount}</span>
               </button>
-              <button onClick={() => setCurrentView('completed')} className={`whitespace-nowrap flex-1 md:flex-none px-3 py-1.5 rounded-md text-xs font-bold transition flex justify-center items-center gap-1.5 ${currentView === 'completed' ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500'}`}>
+              <button 
+                onClick={() => setCurrentView('completed')} 
+                className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-md text-xs font-bold transition flex justify-center items-center gap-1.5 ${currentView === 'completed' ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+              >
                 Completed <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{completedCount}</span>
               </button>
             </div>
 
-            <div className="flex items-center justify-between w-full md:w-auto gap-3">
-              <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold">
+            {/* CONTROLS & ACTIONS */}
+            <div className="flex flex-wrap items-center justify-between w-full md:w-auto gap-2.5">
+              
+              {/* Priority Filter */}
+              <select 
+                value={priorityFilter} 
+                onChange={(e) => setPriorityFilter(e.target.value)} 
+                className="bg-slate-100 dark:bg-slate-800 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer"
+              >
+                <option value="all">All Priorities</option>
+                <option value="2">🚨 High Priority</option>
+                <option value="1">⚡ Medium Priority</option>
+                <option value="0">Normal</option>
+              </select>
+
+              {/* Sort Selector */}
+              <select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value)} 
+                className="bg-slate-100 dark:bg-slate-800 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer"
+              >
+                <option value="manual">Manual Order</option>
+                <option value="priority-desc">Priority: High → Low</option>
+                <option value="priority-asc">Priority: Low → High</option>
+              </select>
+
+              <button 
+                onClick={() => setIsDarkMode(!isDarkMode)} 
+                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold"
+              >
                 {isDarkMode ? '☀️ Light' : '🌙 Dark'}
               </button>
-              <button onClick={addProject} className="flex-1 md:flex-none bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3.5 py-2 md:py-1.5 rounded-lg text-xs shadow transition text-center">
+
+              <button 
+                onClick={addProject} 
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg text-xs shadow transition"
+              >
                 + New Project
               </button>
+
+              {currentView === 'completed' && completedCount > 0 && (
+                <button 
+                  onClick={bulkPurgeCompletedProjects} 
+                  className="bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-bold px-3 py-1.5 rounded-lg text-xs border border-red-300 dark:border-red-800 transition"
+                >
+                  🧹 Clear Completed
+                </button>
+              )}
               
               {(user || isDemoMode) && (
-                <>
-                  <div className="hidden md:block h-4 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
-                  <div className="flex items-center gap-2">
-                    {user?.photoURL ? (
-                      <img src={user.photoURL} className="w-8 h-8 md:w-7 md:h-7 rounded-full border border-slate-300 dark:border-slate-700" alt="Avatar" />
-                    ) : (
-                      <div className="w-8 h-8 md:w-7 md:h-7 rounded-full bg-slate-300 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">
-                        {isDemoMode ? 'D' : '?'}
-                      </div>
-                    )}
-                    <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-red-500 font-semibold transition hidden md:block">
-                      {isDemoMode ? 'Exit Demo' : 'Sign Out'}
-                    </button>
-                  </div>
-                </>
+                <div className="flex items-center gap-2 ml-auto md:ml-0">
+                  {user?.photoURL ? (
+                    <img src={user.photoURL} className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-700" alt="Avatar" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-slate-300 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300">
+                      {isDemoMode ? 'D' : '?'}
+                    </div>
+                  )}
+                  <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-red-500 font-semibold transition hidden md:block">
+                    {isDemoMode ? 'Exit Demo' : 'Sign Out'}
+                  </button>
+                </div>
               )}
             </div>
           </header>
 
-          {/* DYNAMIC LIST / TABLE CONTAINER */}
+          {/* TABLE CONTAINER */}
           <div className="md:bg-white md:dark:bg-slate-900 md:rounded-xl md:border md:border-slate-200 md:dark:border-slate-800 md:shadow-sm overflow-x-hidden md:overflow-x-auto">
             {loading ? (
               <div className="p-12 text-center text-xs font-mono text-slate-400 bg-white dark:bg-slate-900 rounded-xl">Loading workspace...</div>
             ) : (
-              <div className="block md:table w-full text-left border-collapse md:min-w-[1000px]">
+              <div className="block md:table w-full text-left border-collapse md:min-w-[1100px]">
                 
-                {/* Desktop Table Header (Hidden on Mobile) */}
+                {/* Desktop Table Header */}
                 <div className="hidden md:table-header-group">
-                  <div className="md:table-row border-b border-slate-300 dark:border-slate-700 bg-slate-200 dark:bg-slate-800 text-[11px] font-bold uppercase text-slate-700 dark:text-slate-300 tracking-wider">
+                  <div className="md:table-row border-b border-slate-300 dark:border-slate-700 bg-amber-400 text-amber-950 text-[11px] font-extrabold uppercase tracking-wider">
                     <div className="md:table-cell p-3.5 w-[22%]">Project Name</div>
                     <div className="md:table-cell p-3.5 w-[20%]">Status Brief</div>
-                    <div className="md:table-cell p-3.5 w-[28%] bg-slate-300/40 dark:bg-slate-700/40">Next Steps</div>
-                    <div className="md:table-cell p-3.5 w-[15%]">Details</div>
-                    <div className="md:table-cell p-3.5 w-[15%]">Notes</div>
+                    <div className="md:table-cell p-3.5 w-[28%]">Next Steps</div>
+                    <div className="md:table-cell p-3.5 w-[14%]">Details</div>
+                    <div className="md:table-cell p-3.5 w-[16%]">Notes</div>
                   </div>
                 </div>
 
                 <div className="block md:table-row-group">
                   {displayedProjects.length === 0 ? (
                     <div className="block md:table-row bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                      <div className="md:table-cell p-12 text-center text-slate-400 text-sm" style={{gridColumn: "1 / -1"}}>
-                        No projects found in <strong>{currentView}</strong> view. Click "+ New Project" to start.
+                      <div className="md:table-cell p-12 text-center text-slate-400 text-sm">
+                        No projects found in <strong>{currentView}</strong> view. Click "+ New Project" to get started.
                       </div>
                     </div>
                   ) : (
@@ -572,18 +881,26 @@ const firebaseConfig = {
                       const isExpanded = expandedProjectId === p.id;
 
                       return (
-                        <div key={p.id} className={`block md:table-row bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 mb-4 md:mb-0 rounded-xl md:rounded-none overflow-hidden transition md:border-x-0 md:border-t-0 md:border-b hover:bg-slate-50 md:dark:hover:bg-slate-800/60`}>
+                        <div 
+                          key={p.id} 
+                          className={`block md:table-row bg-white dark:bg-slate-900 ${colorScheme.tint} border border-slate-200 dark:border-slate-800 mb-4 md:mb-0 rounded-xl md:rounded-none overflow-hidden transition md:border-x-0 md:border-t-0 md:border-b hover:bg-slate-50 md:dark:hover:bg-slate-800/60`}
+                        >
                           
-                          {/* 1. PROJECT NAME / MOBILE ACCORDION HEADER */}
+                          {/* 1. PROJECT NAME */}
                           <div 
                             onClick={(e) => handleRowClick(e, p.id)}
                             className={`block md:table-cell p-4 md:p-3.5 align-top cursor-pointer md:cursor-default border-l-4 ${colorScheme.border} md:border-r ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'} ${isExpanded ? 'bg-slate-50 dark:bg-slate-800/40 md:bg-transparent' : ''}`}
                           >
                             <div className="flex items-start gap-3 md:gap-2">
-                              <div className="hidden md:flex flex-col text-[10px] text-slate-400 font-bold pt-0.5 opacity-40 hover:opacity-100 transition">
-                                <button onClick={() => moveProject(index, 'up')} disabled={index === 0} className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20">▲</button>
-                                <button onClick={() => moveProject(index, 'down')} disabled={index === displayedProjects.length - 1} className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20">▼</button>
-                              </div>
+                              
+                              {/* Reorder Buttons (Manual Mode) */}
+                              {isManualOrderingActive && (
+                                <div className="hidden md:flex flex-col text-[10px] text-slate-400 font-bold pt-0.5 opacity-40 hover:opacity-100 transition">
+                                  <button onClick={() => moveProject(index, 'up')} disabled={index === 0} className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20">▲</button>
+                                  <button onClick={() => moveProject(index, 'down')} disabled={index === displayedProjects.length - 1} className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20">▼</button>
+                                </div>
+                              )}
+
                               <div className="flex-1 min-w-0">
                                 <AutoSaveInput 
                                   value={p.name} 
@@ -591,70 +908,107 @@ const firebaseConfig = {
                                   onSave={(v) => updateProjectField(p.id, 'name', v)} 
                                   className={`font-bold text-lg md:text-base ${isDarkMode ? 'text-white' : 'text-slate-900'} cursor-text`} 
                                 />
-                                <div className="mt-2 flex flex-wrap items-center gap-3 md:gap-2 text-xs md:text-[11px] font-semibold">
+                                
+                                {/* Status Toggle Links */}
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs md:text-[11px] font-semibold">
                                   {currentView === 'active' && (
-                                    <><button onClick={() => setProjectStatus(p.id, 'paused')} className="text-amber-600 hover:underline px-1 py-1 md:p-0">Pause</button><span className="text-slate-300 hidden md:inline">•</span><button onClick={() => setProjectStatus(p.id, 'completed')} className="text-emerald-600 hover:underline px-1 py-1 md:p-0">Mark Complete</button></>
+                                    <>
+                                      <button onClick={() => setProjectStatus(p.id, 'paused')} className="text-amber-600 dark:text-amber-400 hover:underline">Pause</button>
+                                      <span className="text-slate-300 dark:text-slate-700">•</span>
+                                      <button onClick={() => setProjectStatus(p.id, 'completed')} className="text-emerald-600 dark:text-emerald-400 hover:underline">Complete</button>
+                                    </>
                                   )}
                                   {currentView === 'paused' && (
-                                    <><button onClick={() => setProjectStatus(p.id, 'active')} className="text-blue-600 hover:underline px-1 py-1 md:p-0">Resume</button><span className="text-slate-300 hidden md:inline">•</span><button onClick={() => setProjectStatus(p.id, 'completed')} className="text-emerald-600 hover:underline px-1 py-1 md:p-0">Mark Complete</button></>
+                                    <>
+                                      <button onClick={() => setProjectStatus(p.id, 'active')} className="text-blue-600 dark:text-blue-400 hover:underline">Resume</button>
+                                      <span className="text-slate-300 dark:text-slate-700">•</span>
+                                      <button onClick={() => setProjectStatus(p.id, 'completed')} className="text-emerald-600 dark:text-emerald-400 hover:underline">Complete</button>
+                                    </>
                                   )}
                                   {currentView === 'completed' && (
-                                    <button onClick={() => setProjectStatus(p.id, 'active')} className="text-blue-600 hover:underline px-1 py-1 md:p-0">Reactivate</button>
+                                    <button onClick={() => setProjectStatus(p.id, 'active')} className="text-blue-600 dark:text-blue-400 hover:underline">Reactivate</button>
                                   )}
-                                  <span className="text-slate-300 dark:text-slate-700 hidden md:inline">•</span>
-                                  <button onClick={() => deleteProject(p.id)} className="text-slate-400 hover:text-red-500 px-1 py-1 md:p-0 ml-auto md:ml-0">Delete</button>
+                                  <span className="text-slate-300 dark:text-slate-700">•</span>
+                                  <button onClick={() => deleteProject(p.id)} className="text-slate-400 hover:text-red-500">Delete</button>
                                 </div>
                               </div>
                               
                               {/* Mobile Chevron */}
-                              <div className="md:hidden pt-1 text-slate-400 flex items-center justify-center">
-                                {isExpanded ? (
-                                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
-                                ) : (
-                                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                )}
+                              <div className="md:hidden pt-1 text-slate-400">
+                                <svg className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
                               </div>
                             </div>
                           </div>
 
-                          {/* ACCORDION CONTENT WRAPPER */}
+                          {/* ACCORDION / RESPONSIVE WRAPPER */}
                           <div className={`md:contents ${isExpanded ? 'block' : 'hidden'}`}>
                             
                             {/* 2. BRIEF STATUS */}
                             <div className={`block md:table-cell p-4 md:p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
-                              <label className="md:hidden text-[10px] uppercase font-bold text-slate-400 block mb-2">Status Brief</label>
-                              <AutoResizeTextarea value={p.briefStatus || ''} placeholder="..." onSave={(v) => updateProjectField(p.id, 'briefStatus', v)} className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`} />
+                              <label className="md:hidden text-[10px] uppercase font-bold text-slate-400 block mb-1">Status Brief</label>
+                              <AutoResizeTextarea 
+                                value={p.briefStatus || ''} 
+                                placeholder="Status overview..." 
+                                onSave={(v) => updateProjectField(p.id, 'briefStatus', v)} 
+                                className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`} 
+                              />
                             </div>
 
                             {/* 3. NEXT STEPS CHECKLIST */}
-                            <div className={`block md:table-cell p-4 md:p-3.5 align-top border-t md:border-t-0 md:border-r-2 border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800 md:bg-slate-950/40' : 'md:border-r-slate-300 md:bg-slate-50/80'}`}>
+                            <div className={`block md:table-cell p-4 md:p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <div className="flex justify-between items-center mb-2 md:mb-1">
                                 <label className="md:hidden text-[10px] uppercase font-bold text-slate-400 block">Next Steps</label>
-                                <button onClick={() => purgeProjectSubSteps(p.id)} className="text-[11px] md:text-[10px] text-slate-400 hover:text-amber-500 font-semibold bg-slate-100 dark:bg-slate-800 px-2 py-1 md:p-0 md:bg-transparent rounded md:rounded-none ml-auto">🧹 Purge Done</button>
+                                <button 
+                                  onClick={() => purgeProjectSubSteps(p.id, 'nextSteps')} 
+                                  className="text-[10px] text-slate-400 hover:text-amber-500 font-semibold ml-auto"
+                                >
+                                  🧹 Purge Done
+                                </button>
                               </div>
-                              {renderList(p, 'nextSteps')}
+                              {renderSubList(p, 'nextSteps')}
                             </div>
 
-                            {/* 4. DETAILS */}
-                            <div className={`flex md:table-cell flex-row md:flex-col gap-4 p-4 md:p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
+                            {/* 4. DETAILS (PRIORITY & CATEGORY) */}
+                            <div className={`flex md:table-cell flex-row md:flex-col gap-3 p-4 md:p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <div className="flex-1">
                                 <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Priority</label>
-                                <select value={p.priority} onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} className={`text-sm md:text-xs p-2 md:p-1.5 rounded font-bold border w-full cursor-pointer shadow-sm ${priorityMeta.badge}`}>
-                                  {PRIORITIES.map(opt => <option key={opt.level} value={opt.level} className="bg-white text-slate-900 font-semibold">{opt.label}</option>)}
+                                <select 
+                                  value={p.priority} 
+                                  onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
+                                  className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer shadow-sm ${priorityMeta.badge}`}
+                                >
+                                  {PRIORITIES.map(opt => (
+                                    <option key={opt.level} value={opt.level} className="bg-white text-slate-900 font-semibold">{opt.label}</option>
+                                  ))}
                                 </select>
                               </div>
+
                               <div className="flex-1">
-                                <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1 mt-0 md:mt-3">Category</label>
-                                <select value={p.category || 'None'} onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} className={`text-sm md:text-xs p-2 md:p-1.5 rounded font-bold border w-full cursor-pointer ${colorScheme.badge}`}>
+                                <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1 mt-0 md:mt-2">Category</label>
+                                <select 
+                                  value={p.category || 'None'} 
+                                  onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
+                                  className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer ${colorScheme.badge}`}
+                                >
                                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                               </div>
                             </div>
 
                             {/* 5. NOTES */}
-                            <div className="block md:table-cell p-4 md:p-3.5 align-top border-t md:border-t-0 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/20 md:bg-transparent">
-                              <label className="md:hidden text-[10px] uppercase font-bold text-slate-400 block mb-2">Notes</label>
-                              {renderList(p, 'notes')}
+                            <div className="block md:table-cell p-4 md:p-3.5 align-top border-t md:border-t-0 border-slate-100 dark:border-slate-800">
+                              <div className="flex justify-between items-center mb-2 md:mb-1">
+                                <label className="md:hidden text-[10px] uppercase font-bold text-slate-400 block">Notes</label>
+                                <button 
+                                  onClick={() => purgeProjectSubSteps(p.id, 'notes')} 
+                                  className="text-[10px] text-slate-400 hover:text-amber-500 font-semibold ml-auto"
+                                >
+                                  🧹 Purge Done
+                                </button>
+                              </div>
+                              {renderSubList(p, 'notes')}
                             </div>
 
                           </div>
@@ -670,11 +1024,22 @@ const firebaseConfig = {
       );
     }
 
+    // --- ERROR BOUNDARY ---
     class ErrorBoundary extends Component {
       constructor(props) { super(props); this.state = { hasError: false }; }
       static getDerivedStateFromError() { return { hasError: true }; }
       render() {
-        if (this.state.hasError) return <div className="p-8 text-center text-red-600 font-bold">Application Error. Reload required.</div>;
+        if (this.state.hasError) {
+          return (
+            <div className="p-8 text-center max-w-md mx-auto my-12 bg-white dark:bg-slate-900 border rounded-2xl shadow-xl">
+              <h2 className="text-lg font-bold text-red-600 mb-2">Workspace Render Error</h2>
+              <p className="text-xs text-slate-500 mb-4">A component state error occurred. Reloading will reset your view layout.</p>
+              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-amber-500 text-slate-950 font-bold rounded-lg text-xs">
+                Reload Workspace
+              </button>
+            </div>
+          );
+        }
         return this.props.children;
       }
     }
