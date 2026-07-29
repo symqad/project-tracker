@@ -25,7 +25,7 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 antialiased font-sans select-none sm:select-auto">
+<body class="antialiased font-sans select-none sm:select-auto transition-colors duration-200">
   <div id="root"></div>
 
   <script type="text/babel" data-type="module">
@@ -65,19 +65,19 @@
       const CATEGORIES = ['None', 'Personal', 'Career', 'Family', 'Spiritual', 'Financial', 'Learning'];
 
       const CATEGORY_COLORS = {
-        'None': { border: 'border-l-slate-400', bg: 'bg-slate-900/40', text: 'text-slate-100' },
-        'Personal': { border: 'border-l-blue-400', bg: 'bg-blue-950/20', text: 'text-blue-100' },
-        'Career': { border: 'border-l-orange-400', bg: 'bg-orange-950/20', text: 'text-orange-100' },
-        'Family': { border: 'border-l-fuchsia-400', bg: 'bg-fuchsia-950/20', text: 'text-fuchsia-100' },
-        'Spiritual': { border: 'border-l-green-400', bg: 'bg-green-950/20', text: 'text-green-100' },
-        'Financial': { border: 'border-l-purple-400', bg: 'bg-purple-950/20', text: 'text-purple-100' },
-        'Learning': { border: 'border-l-pink-400', bg: 'bg-pink-950/20', text: 'text-pink-100' }
+        'None': { border: 'border-l-slate-400', darkBg: 'bg-slate-900/40', lightBg: 'bg-slate-100/60', badge: 'bg-slate-500/20 text-slate-400 border-slate-500/30' },
+        'Personal': { border: 'border-l-blue-500', darkBg: 'bg-blue-950/25', lightBg: 'bg-blue-50/80', badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+        'Career': { border: 'border-l-orange-500', darkBg: 'bg-orange-950/25', lightBg: 'bg-orange-50/80', badge: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
+        'Family': { border: 'border-l-fuchsia-500', darkBg: 'bg-fuchsia-950/25', lightBg: 'bg-fuchsia-50/80', badge: 'bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30' },
+        'Spiritual': { border: 'border-l-green-500', darkBg: 'bg-green-950/25', lightBg: 'bg-green-50/80', badge: 'bg-green-500/20 text-green-400 border-green-500/30' },
+        'Financial': { border: 'border-l-purple-500', darkBg: 'bg-purple-950/25', lightBg: 'bg-purple-50/80', badge: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+        'Learning': { border: 'border-l-pink-500', darkBg: 'bg-pink-950/25', lightBg: 'bg-pink-50/80', badge: 'bg-pink-500/20 text-pink-400 border-pink-500/30' }
       };
 
       const PRIORITIES = [
-        { level: 0, label: 'Normal' },
-        { level: 1, label: '❗ High' },
-        { level: 2, label: '‼️ Urgent' }
+        { level: 0, label: 'Normal', badgeDark: 'bg-slate-800 text-slate-300 border-slate-700', badgeLight: 'bg-slate-200 text-slate-700 border-slate-300' },
+        { level: 1, label: '❗ High', badgeDark: 'bg-amber-500/20 text-amber-300 border-amber-500/40', badgeLight: 'bg-amber-100 text-amber-800 border-amber-300' },
+        { level: 2, label: '‼️ Urgent', badgeDark: 'bg-red-500/20 text-red-400 border-red-500/50 animate-pulse', badgeLight: 'bg-red-100 text-red-800 border-red-300' }
       ];
 
       const INITIAL_DEMO_PROJECTS = [
@@ -186,7 +186,7 @@
               rows={1} 
             />
             {maxLength && val.length > maxLength * 0.8 && (
-              <div className="text-[10px] text-amber-400 font-mono text-right opacity-70 mt-0.5">
+              <div className="text-[10px] text-amber-500 font-mono text-right opacity-80 mt-0.5">
                 {val.length}/{maxLength}
               </div>
             )}
@@ -204,7 +204,7 @@
           if (this.state.hasError) {
             return (
               <div className="p-8 text-center">
-                <h2 className="text-lg font-bold text-red-400">A workspace error occurred.</h2>
+                <h2 className="text-lg font-bold text-red-500">A workspace error occurred.</h2>
                 <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-amber-500 text-slate-950 rounded font-bold">Reload Workspace</button>
               </div>
             );
@@ -222,6 +222,17 @@
         const [expandedCompleted, setExpandedCompleted] = useState({});
         const [expandedMobileIds, setExpandedMobileIds] = useState({});
         
+        // Dark / Light Theme state
+        const [isDarkMode, setIsDarkMode] = useState(() => {
+          return localStorage.getItem('tracker_theme') !== 'light';
+        });
+
+        const toggleTheme = () => {
+          const next = !isDarkMode;
+          setIsDarkMode(next);
+          localStorage.setItem('tracker_theme', next ? 'dark' : 'light');
+        };
+
         const [isDemoMode, setIsDemoMode] = useState(() => {
           const urlParams = new URLSearchParams(window.location.search);
           return urlParams.get('demo') === 'true';
@@ -441,7 +452,7 @@
           const maxLen = field === 'notes' ? 1000 : null;
 
           const renderItemRow = (item, originalIdx) => (
-            <div key={item.id || originalIdx} className="flex items-start gap-2 group py-1 border-b border-slate-800/40 last:border-0">
+            <div key={item.id || originalIdx} className={`flex items-start gap-2 group py-1 border-b last:border-0 ${isDarkMode ? 'border-slate-800/40' : 'border-slate-200/80'}`}>
               <input 
                 type="checkbox" 
                 checked={item.done || false} 
@@ -450,7 +461,7 @@
                   newList[originalIdx] = { ...newList[originalIdx], done: e.target.checked };
                   updateProjectField(project.id, field, newList);
                 }} 
-                className="mt-1 h-4 w-4 rounded border-slate-700 text-amber-500 focus:ring-amber-500/30 bg-slate-900 cursor-pointer flex-shrink-0"
+                className={`mt-1 h-4 w-4 rounded border text-amber-500 focus:ring-amber-500/30 cursor-pointer flex-shrink-0 ${isDarkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-300 bg-white'}`}
               />
               <AutoResizeTextarea
                 value={item.text || ''}
@@ -463,7 +474,7 @@
                   newList[originalIdx] = { ...newList[originalIdx], text: sanitizeInput(v, maxLen) };
                   updateProjectField(project.id, field, newList);
                 }}
-                className={`flex-1 text-sm leading-relaxed ${item.done ? 'line-through text-slate-500' : isMuted ? 'text-slate-300 group-hover:text-slate-100 transition' : 'text-slate-100'}`}
+                className={`flex-1 text-sm leading-relaxed ${item.done ? (isDarkMode ? 'line-through text-slate-500' : 'line-through text-slate-400') : isMuted ? (isDarkMode ? 'text-slate-300 group-hover:text-slate-100' : 'text-slate-700 group-hover:text-slate-900') : (isDarkMode ? 'text-slate-100' : 'text-slate-800')}`}
               />
             </div>
           );
@@ -482,23 +493,23 @@
                   setFocusId(newId);
                   updateProjectField(project.id, field, newList);
                 }} 
-                className="text-xs text-amber-400 hover:text-amber-300 font-bold transition flex items-center gap-1 mt-1.5 py-0.5 opacity-90 hover:opacity-100"
+                className="text-xs text-amber-500 hover:text-amber-400 font-bold transition flex items-center gap-1 mt-1.5 py-0.5 opacity-90 hover:opacity-100"
               >
                 + Add Step
               </button>
 
               {completedItems.length > 0 && (
-                <div className="mt-2 pt-1 border-t border-slate-800/60">
+                <div className={`mt-2 pt-1 border-t ${isDarkMode ? 'border-slate-800/60' : 'border-slate-200'}`}>
                   <button 
                     onClick={() => toggleShowCompleted(expandKey)}
-                    className="text-[11px] font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1"
+                    className={`text-[11px] font-semibold transition flex items-center gap-1 ${isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'}`}
                   >
                     <span>{isExpanded ? '▼' : '▶'}</span>
                     <span>{isExpanded ? 'Hide' : 'Show'} {completedItems.length} completed</span>
                   </button>
 
                   {isExpanded && (
-                    <div className="mt-1 pl-2 border-l-2 border-slate-800 space-y-1">
+                    <div className={`mt-1 pl-2 border-l-2 space-y-1 ${isDarkMode ? 'border-slate-800' : 'border-slate-300'}`}>
                       {completedItems.map(item => {
                         const originalIdx = list.findIndex(i => i.id === item.id);
                         return renderItemRow(item, originalIdx);
@@ -511,21 +522,21 @@
           );
         };
 
-        if (loading) return <div className="h-screen flex items-center justify-center text-slate-400 font-mono text-sm">Connecting Hardened Workspace...</div>;
+        if (loading) return <div className={`h-screen flex items-center justify-center font-mono text-sm ${isDarkMode ? 'bg-slate-950 text-slate-400' : 'bg-slate-50 text-slate-600'}`}>Connecting Hardened Workspace...</div>;
 
         if (!user && !isDemoMode) {
           return (
-            <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col lg:flex-row font-sans">
+            <div className={`min-h-screen flex flex-col lg:flex-row font-sans ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
               <div className="flex-1 p-8 sm:p-12 lg:p-16 flex flex-col justify-between items-start max-w-7xl mx-auto w-full">
                 <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold mb-6">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 text-xs font-semibold mb-6">
                     <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
                     ADHD Focused Workspace Architecture
                   </div>
-                  <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-4 text-white">
+                  <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-4">
                     Master Project Tracker
                   </h1>
-                  <p className="text-slate-300 text-base sm:text-lg max-w-2xl leading-relaxed mb-10">
+                  <p className={`text-base sm:text-lg max-w-2xl leading-relaxed mb-10 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
                     Low-friction execution environment designed to eliminate cognitive re-entry friction. Clear status context, wide action targets, zero visual clutter.
                   </p>
                 </div>
@@ -534,21 +545,21 @@
                 </div>
               </div>
 
-              <div className="w-full lg:w-[440px] bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 p-8 sm:p-12 flex items-center justify-center">
+              <div className={`w-full lg:w-[440px] border-t lg:border-t-0 lg:border-l p-8 sm:p-12 flex items-center justify-center ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                 <div className="w-full max-w-sm text-center">
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">Get Started</h2>
-                  <p className="text-slate-400 text-xs sm:text-sm mb-8">Sign in to save your workspace or enter sandbox mode.</p>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold mb-3">Get Started</h2>
+                  <p className={`text-xs sm:text-sm mb-8 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Sign in to save your workspace or enter sandbox mode.</p>
                   
                   <button 
                     onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}
-                    className="w-full py-3.5 px-4 bg-white text-slate-950 font-bold rounded-lg shadow hover:bg-slate-100 transition text-sm flex items-center justify-center gap-3 mb-4"
+                    className="w-full py-3.5 px-4 bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-bold rounded-lg shadow hover:opacity-90 transition text-sm flex items-center justify-center gap-3 mb-4"
                   >
                     Continue with Google
                   </button>
 
                   <button 
                     onClick={() => setIsDemoMode(true)}
-                    className="w-full py-3 px-4 bg-transparent hover:bg-slate-800 text-amber-400 font-bold rounded-lg border border-amber-500/30 transition text-sm"
+                    className="w-full py-3 px-4 bg-transparent hover:bg-amber-500/10 text-amber-500 font-bold rounded-lg border border-amber-500/40 transition text-sm"
                   >
                     Enter Sandbox Demo Mode
                   </button>
@@ -558,69 +569,80 @@
           );
         }
 
-        // Guaranteed frontend sorting by orderIndex
         const displayedProjects = projects
           .filter(p => p.archived === showArchived)
           .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
 
         return (
           <ErrorBoundary>
-            {isDemoMode && (
-              <div className="bg-amber-500 text-slate-950 text-xs font-bold px-4 py-2 flex items-center justify-between shadow">
-                <span>⚡ Sandbox Demo Mode: Changes persist in memory and reset on refresh.</span>
-                <button onClick={() => setIsDemoMode(false)} className="bg-slate-950 text-white px-3 py-0.5 rounded text-xs font-extrabold">
-                  Exit Demo
-                </button>
-              </div>
-            )}
-
-            <div className="p-4 md:p-6 min-h-screen bg-slate-950 text-slate-100">
-              <div className="max-w-[1500px] mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <h1 className="text-2xl font-black tracking-tight text-white">Workspace</h1>
-                  <span className="text-xs px-2.5 py-1 rounded-md font-mono bg-slate-900 border border-slate-800 text-slate-400">
-                    {isDemoMode ? 'sandbox@local' : user?.email}
-                  </span>
+            <div className={`min-h-screen ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
+              {isDemoMode && (
+                <div className="bg-amber-500 text-slate-950 text-xs font-bold px-4 py-2 flex items-center justify-between shadow">
+                  <span>⚡ Sandbox Demo Mode: Changes persist in memory and reset on refresh.</span>
+                  <button onClick={() => setIsDemoMode(false)} className="bg-slate-950 text-white px-3 py-0.5 rounded text-xs font-extrabold">
+                    Exit Demo
+                  </button>
                 </div>
+              )}
 
-                <div className="flex flex-wrap gap-2 items-center">
-                  <button 
-                    onClick={purgeAllCompleted}
-                    className="px-3.5 py-1.5 text-xs rounded-lg font-bold border border-slate-800 bg-slate-900/80 text-slate-300 hover:text-amber-400 hover:border-amber-500/40 transition"
-                  >
-                    🧹 Purge All Completed
-                  </button>
-                  <button 
-                    onClick={() => setShowArchived(!showArchived)} 
-                    className="px-3.5 py-1.5 text-xs rounded-lg font-bold border border-slate-800 bg-slate-900 text-slate-300 hover:text-white transition"
-                  >
-                    {showArchived ? "View Active" : "View Archived"}
-                  </button>
-                  {!isDemoMode && (
+              <div className="p-4 md:p-6 max-w-[1500px] mx-auto">
+                <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <h1 className="text-2xl font-black tracking-tight">Workspace</h1>
+                    <span className={`text-xs px-2.5 py-1 rounded-md font-mono border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-white border-slate-300 text-slate-600'}`}>
+                      {isDemoMode ? 'sandbox@local' : user?.email}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {/* Dark/Light Mode Switcher */}
                     <button 
-                      onClick={() => auth.signOut()} 
-                      className="px-3.5 py-1.5 text-xs border border-slate-800 rounded-lg font-semibold text-slate-400 hover:text-red-400 transition"
+                      onClick={toggleTheme}
+                      className={`px-3 py-1.5 text-xs rounded-lg font-bold border transition flex items-center gap-1.5 ${isDarkMode ? 'border-slate-800 bg-slate-900 text-amber-400 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'}`}
+                      title="Toggle visual theme"
                     >
-                      Sign Out
+                      {isDarkMode ? '☀️ Light' : '🌙 Dark'}
                     </button>
-                  )}
-                </div>
-              </div>
 
-              <div className="max-w-[1500px] mx-auto">
+                    <button 
+                      onClick={purgeAllCompleted}
+                      className={`px-3.5 py-1.5 text-xs rounded-lg font-bold border transition ${isDarkMode ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:text-amber-400 hover:border-amber-500/40' : 'border-slate-300 bg-white text-slate-700 hover:text-amber-600 hover:border-amber-500'}`}
+                    >
+                      🧹 Purge All Completed
+                    </button>
+
+                    <button 
+                      onClick={() => setShowArchived(!showArchived)} 
+                      className={`px-3.5 py-1.5 text-xs rounded-lg font-bold border transition ${isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white' : 'border-slate-300 bg-white text-slate-700 hover:text-slate-950'}`}
+                    >
+                      {showArchived ? "View Active" : "View Archived"}
+                    </button>
+
+                    {!isDemoMode && (
+                      <button 
+                        onClick={() => auth.signOut()} 
+                        className={`px-3.5 py-1.5 text-xs border rounded-lg font-semibold transition ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-red-400' : 'border-slate-300 text-slate-600 hover:text-red-600'}`}
+                      >
+                        Sign Out
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {/* MOBILE VIEW */}
                 <div className="block md:hidden space-y-3">
                   {displayedProjects.map((p, index) => {
                     const colorScheme = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
+                    const priorityMeta = PRIORITIES.find(pr => pr.level === p.priority) || PRIORITIES[0];
                     const isExpanded = !!expandedMobileIds[p.id];
 
                     return (
-                      <div key={p.id} className={`rounded-xl border shadow-sm overflow-hidden border-l-4 ${colorScheme.border} ${colorScheme.bg} border-slate-800`}>
+                      <div key={p.id} className={`rounded-xl border shadow-sm overflow-hidden border-l-4 ${colorScheme.border} ${isDarkMode ? colorScheme.darkBg + ' border-slate-800' : colorScheme.lightBg + ' border-slate-300'}`}>
                         <div className="p-4 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5 pr-1">
-                            <div className="flex flex-col text-[10px] text-slate-500 font-bold">
-                              <button onClick={() => moveProject(index, 'up')} disabled={index === 0} className="hover:text-amber-400 disabled:opacity-20 px-1 py-0.5">▲</button>
-                              <button onClick={() => moveProject(index, 'down')} disabled={index === displayedProjects.length - 1} className="hover:text-amber-400 disabled:opacity-20 px-1 py-0.5">▼</button>
+                            <div className="flex flex-col text-[10px] text-slate-400 font-bold">
+                              <button onClick={() => moveProject(index, 'up')} disabled={index === 0} className="hover:text-amber-500 disabled:opacity-20 px-1 py-0.5">▲</button>
+                              <button onClick={() => moveProject(index, 'down')} disabled={index === displayedProjects.length - 1} className="hover:text-amber-500 disabled:opacity-20 px-1 py-0.5">▼</button>
                             </div>
                           </div>
 
@@ -629,20 +651,20 @@
                               value={p.name} 
                               placeholder="Project Name..."
                               onSave={(v) => updateProjectField(p.id, 'name', v)} 
-                              className="w-full font-bold text-base text-white" 
+                              className={`w-full font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`} 
                             />
                             <div className="flex items-center gap-2 mt-2">
                               <select 
                                 value={p.priority} 
                                 onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
-                                className="text-xs px-2 py-1 rounded font-bold border bg-slate-900 border-slate-800 text-slate-300"
+                                className={`text-xs px-2 py-1 rounded font-bold border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-800'}`}
                               >
                                 {PRIORITIES.map(opt => <option key={opt.level} value={opt.level}>{opt.label}</option>)}
                               </select>
                               <select 
                                 value={p.category || 'None'} 
                                 onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
-                                className="text-xs px-2 py-1 rounded font-semibold border bg-slate-900 border-slate-800 text-slate-300"
+                                className={`text-xs px-2 py-1 rounded font-semibold border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-800'}`}
                               >
                                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                               </select>
@@ -651,26 +673,26 @@
 
                           <button 
                             onClick={() => setExpandedMobileIds(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
-                            className="p-2 rounded-lg font-bold text-sm border bg-slate-900 border-slate-800 text-slate-300"
+                            className={`p-2 rounded-lg font-bold text-sm border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-300 text-slate-700'}`}
                           >
                             {isExpanded ? '▲' : '▼'}
                           </button>
                         </div>
 
                         {isExpanded && (
-                          <div className="p-4 border-t border-slate-800/80 bg-slate-950/60 space-y-4">
+                          <div className={`p-4 border-t space-y-4 ${isDarkMode ? 'border-slate-800/80 bg-slate-950/60' : 'border-slate-200 bg-white/80'}`}>
                             <div>
-                              <div className="text-[11px] font-black uppercase tracking-wider text-amber-400 mb-1">Status Brief</div>
+                              <div className="text-[11px] font-black uppercase tracking-wider text-amber-500 mb-1">Status Brief</div>
                               <AutoResizeTextarea 
                                 value={p.status || ''} 
                                 placeholder="..."
                                 onSave={(v) => updateProjectField(p.id, 'status', v)} 
-                                className="w-full text-sm leading-relaxed text-slate-200"
+                                className={`w-full text-sm leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
                               />
                             </div>
 
                             <div>
-                              <div className="text-[11px] font-black uppercase tracking-wider text-amber-400 mb-1">Next Steps</div>
+                              <div className="text-[11px] font-black uppercase tracking-wider text-amber-500 mb-1">Next Steps</div>
                               {renderList(p, 'nextSteps')}
                             </div>
 
@@ -679,15 +701,15 @@
                               {renderList(p, 'notes', true)}
                             </div>
 
-                            <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
-                              <button onClick={() => purgeProjectCompleted(p.id)} className="text-slate-400 hover:text-amber-400 font-semibold">
+                            <div className={`pt-2 border-t flex items-center justify-between text-xs ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                              <button onClick={() => purgeProjectCompleted(p.id)} className="text-slate-500 hover:text-amber-500 font-semibold">
                                 Clean Done
                               </button>
                               <div className="flex gap-3">
-                                <button onClick={() => updateProjectField(p.id, 'archived', !p.archived)} className="text-slate-400 hover:text-slate-200 font-semibold">
+                                <button onClick={() => updateProjectField(p.id, 'archived', !p.archived)} className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-semibold">
                                   {p.archived ? "Unarchive" : "Archive"}
                                 </button>
-                                <button onClick={() => deleteProject(p.id)} className="text-slate-400 hover:text-red-400 font-semibold">
+                                <button onClick={() => deleteProject(p.id)} className="text-slate-500 hover:text-red-500 font-semibold">
                                   Delete
                                 </button>
                               </div>
@@ -700,31 +722,33 @@
                 </div>
 
                 {/* DESKTOP HIGH-DENSITY TABLE */}
-                <div className="hidden md:block rounded-xl border shadow-sm overflow-hidden bg-slate-900 border-slate-800">
+                <div className={`hidden md:block rounded-xl border shadow-sm overflow-hidden ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300'}`}>
                   <table className="w-full text-left border-collapse min-w-[1280px] table-fixed">
                     <thead className="bg-amber-500 text-slate-950 text-xs font-black uppercase tracking-wider">
                       <tr>
-                        <th className="p-3.5 w-[20%] border-r border-amber-600/30">Project Name</th>
+                        <th className="p-3.5 w-[22%] border-r border-amber-600/30">Project Name</th>
                         <th className="p-3.5 w-[20%] border-r border-amber-600/30">Status Brief</th>
-                        <th className="p-3.5 w-[32%] border-r-2 border-slate-700">Next Steps</th>
-                        <th className="p-3.5 w-[12%] border-r border-amber-600/30">Metadata</th>
-                        <th className="p-3.5 w-[16%]">Notes</th>
+                        <th className="p-3.5 w-[30%] border-r-2 border-slate-700">Next Steps</th>
+                        <th className="p-3.5 w-[13%] border-r border-amber-600/30">Details</th>
+                        <th className="p-3.5 w-[15%]">Notes</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/80">
+                    <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/80' : 'divide-slate-200'}`}>
                       {displayedProjects.map((p, index) => {
                         const colorScheme = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
+                        const priorityMeta = PRIORITIES.find(pr => pr.level === p.priority) || PRIORITIES[0];
 
                         return (
-                          <tr key={p.id} className="hover:bg-slate-800/60 transition group border-b border-slate-800">
-                            {/* Project Name + Integrated Reorder Controls */}
-                            <td className={`p-3.5 align-top border-l-4 ${colorScheme.border} bg-slate-900/30`}>
+                          <tr key={p.id} className={`transition group border-b border-l-4 ${colorScheme.border} ${isDarkMode ? colorScheme.darkBg + ' border-slate-800 hover:bg-slate-800/50' : colorScheme.lightBg + ' border-slate-200 hover:bg-slate-100'}`}>
+                            
+                            {/* Project Name Cell */}
+                            <td className="p-3.5 align-top">
                               <div className="flex items-start gap-2">
-                                <div className="flex flex-col text-[10px] text-slate-500 font-bold pt-0.5 opacity-40 group-hover:opacity-100 transition">
+                                <div className="flex flex-col text-[10px] text-slate-400 font-bold pt-0.5 opacity-40 group-hover:opacity-100 transition">
                                   <button 
                                     onClick={() => moveProject(index, 'up')} 
                                     disabled={index === 0} 
-                                    className="hover:text-amber-400 leading-none p-0.5 disabled:opacity-20"
+                                    className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20"
                                     title="Move project up"
                                   >
                                     ▲
@@ -732,7 +756,7 @@
                                   <button 
                                     onClick={() => moveProject(index, 'down')} 
                                     disabled={index === displayedProjects.length - 1} 
-                                    className="hover:text-amber-400 leading-none p-0.5 disabled:opacity-20"
+                                    className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20"
                                     title="Move project down"
                                   >
                                     ▼
@@ -744,27 +768,28 @@
                                     value={p.name} 
                                     placeholder="Project Name..."
                                     onSave={(v) => updateProjectField(p.id, 'name', v)} 
-                                    className="font-bold text-base text-white" 
+                                    className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`} 
                                   />
+
                                   <div className="mt-2 flex items-center gap-2 text-[11px]">
                                     <button 
                                       onClick={() => purgeProjectCompleted(p.id)}
-                                      className="text-slate-500 hover:text-amber-400 transition font-semibold"
+                                      className="text-slate-400 hover:text-amber-500 transition font-semibold"
                                       title="Purge completed items in this project"
                                     >
                                       🧹 Purge
                                     </button>
-                                    <span className="text-slate-700">•</span>
+                                    <span className="text-slate-400">•</span>
                                     <button 
                                       onClick={() => updateProjectField(p.id, 'archived', !p.archived)} 
-                                      className="text-slate-500 hover:text-slate-300 transition font-semibold"
+                                      className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition font-semibold"
                                     >
                                       {p.archived ? "Unarchive" : "Archive"}
                                     </button>
-                                    <span className="text-slate-700">•</span>
+                                    <span className="text-slate-400">•</span>
                                     <button 
                                       onClick={() => deleteProject(p.id)} 
-                                      className="text-slate-500 hover:text-red-400 transition font-semibold"
+                                      className="text-slate-400 hover:text-red-500 transition font-semibold"
                                     >
                                       Delete
                                     </button>
@@ -773,37 +798,41 @@
                               </div>
                             </td>
 
+                            {/* Status Brief */}
                             <td className="p-3.5 align-top">
                               <AutoResizeTextarea 
                                 value={p.status || ''} 
                                 placeholder="..."
                                 onSave={(v) => updateProjectField(p.id, 'status', v)} 
-                                className="text-sm leading-relaxed text-slate-200"
+                                className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
                               />
                             </td>
 
-                            <td className="p-3.5 align-top border-r-2 border-slate-800 bg-slate-950/20">
+                            {/* Next Steps */}
+                            <td className={`p-3.5 align-top border-r-2 ${isDarkMode ? 'border-slate-800 bg-slate-950/20' : 'border-slate-200 bg-white/40'}`}>
                               {renderList(p, 'nextSteps')}
                             </td>
 
-                            <td className="p-3.5 align-top opacity-70 group-hover:opacity-100 transition">
-                              <div className="space-y-2">
+                            {/* Details (Category & Priority) */}
+                            <td className="p-3.5 align-top">
+                              <div className="space-y-3">
                                 <div>
-                                  <label className="text-[10px] uppercase font-mono text-slate-400 block mb-0.5">Priority</label>
+                                  <label className="text-[10px] uppercase font-mono text-slate-400 block mb-1">Priority</label>
                                   <select 
                                     value={p.priority} 
                                     onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
-                                    className="bg-slate-950 border border-slate-800 text-slate-300 p-1 text-xs rounded font-bold w-full"
+                                    className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer ${isDarkMode ? priorityMeta.badgeDark : priorityMeta.badgeLight}`}
                                   >
                                     {PRIORITIES.map(opt => <option key={opt.level} value={opt.level}>{opt.label}</option>)}
                                   </select>
                                 </div>
+
                                 <div>
-                                  <label className="text-[10px] uppercase font-mono text-slate-400 block mb-0.5">Category</label>
+                                  <label className="text-[10px] uppercase font-mono text-slate-400 block mb-1">Category Domain</label>
                                   <select 
                                     value={p.category || 'None'} 
                                     onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
-                                    className="bg-slate-950 border border-slate-800 text-slate-300 p-1 text-xs rounded font-semibold w-full"
+                                    className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer ${colorScheme.badge}`}
                                   >
                                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                   </select>
@@ -811,7 +840,8 @@
                               </div>
                             </td>
 
-                            <td className="p-3.5 align-top opacity-70 group-hover:opacity-100 transition">
+                            {/* Notes */}
+                            <td className="p-3.5 align-top">
                               {renderList(p, 'notes', true)}
                             </td>
                           </tr>
