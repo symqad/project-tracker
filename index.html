@@ -1,10 +1,10 @@
-<!-- Version 1.4.0 - Master Consolidated Release -->
+<!-- Version 1.6.0 - High Accessibility & ADHD Eye-Tracking Release -->
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Personal Project Tracker</title>
+  <title>Personal Project Tracker - High Contrast & ADHD Friendly</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -43,10 +43,17 @@
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .dark ::-webkit-scrollbar-thumb { background: #334155; }
     
-    /* Clean contenteditable & textarea focus states */
     textarea:focus, input:focus, select:focus {
       outline: none !important;
       box-shadow: none !important;
+    }
+
+    .pulse-hud {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
   </style>
 </head>
@@ -91,69 +98,63 @@
     }
 
     // --- CONSTANTS & SCHEMAS ---
-    const MAX_NOTE_LENGTH = 280; // Character limit guardrail for notes/sub-items
+    const MAX_NAME_LENGTH = 120;
+    const MAX_NOTE_LENGTH = 280;
+    const MAX_BATCH_OPERATIONS = 400;
 
-    const CATEGORIES = ['Work', 'Personal', 'Career', 'Projects', 'Financial', 'Learning', 'Family', 'Spiritual', 'None'];
+    // REMOVED 'Projects' & 'Career' as per request
+    const CATEGORIES = ['Work', 'Personal', 'Financial', 'Learning', 'Family', 'Spiritual', 'None'];
 
+    // Deep Orange applied to Work category; translucent row tinting enabled for ADHD eye tracking
     const CATEGORY_COLORS = {
       Work: { 
-        border: 'border-l-blue-500', 
-        badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 border-blue-300', 
-        tint: 'bg-blue-50/40 dark:bg-blue-950/20' 
+        border: 'border-l-orange-600', 
+        badge: 'bg-orange-100 text-orange-950 border-orange-300 dark:bg-orange-950/70 dark:text-orange-200', 
+        tint: 'bg-orange-50/70 dark:bg-orange-950/30' 
       },
       Personal: { 
-        border: 'border-l-emerald-500', 
-        badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border-emerald-300', 
-        tint: 'bg-emerald-50/40 dark:bg-emerald-950/20' 
-      },
-      Career: { 
-        border: 'border-l-orange-500', 
-        badge: 'bg-orange-100 text-orange-800 dark:bg-orange-900/60 dark:text-orange-200 border-orange-300', 
-        tint: 'bg-orange-50/40 dark:bg-orange-950/20' 
-      },
-      Projects: { 
-        border: 'border-l-purple-500', 
-        badge: 'bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200 border-purple-300', 
-        tint: 'bg-purple-50/40 dark:bg-purple-950/20' 
+        border: 'border-l-emerald-600', 
+        badge: 'bg-emerald-100 text-emerald-950 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-200', 
+        tint: 'bg-emerald-50/70 dark:bg-emerald-950/30' 
       },
       Financial: { 
-        border: 'border-l-amber-500', 
-        badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border-amber-300', 
-        tint: 'bg-amber-50/40 dark:bg-amber-950/20' 
+        border: 'border-l-amber-600', 
+        badge: 'bg-amber-100 text-amber-950 border-amber-300 dark:bg-amber-950/70 dark:text-amber-200', 
+        tint: 'bg-amber-50/70 dark:bg-amber-950/30' 
       },
       Learning: { 
-        border: 'border-l-pink-500', 
-        badge: 'bg-pink-100 text-pink-800 dark:bg-pink-900/60 dark:text-pink-200 border-pink-300', 
-        tint: 'bg-pink-50/40 dark:bg-pink-950/20' 
+        border: 'border-l-pink-600', 
+        badge: 'bg-pink-100 text-pink-950 border-pink-300 dark:bg-pink-950/70 dark:text-pink-200', 
+        tint: 'bg-pink-50/70 dark:bg-pink-950/30' 
       },
       Family: { 
-        border: 'border-l-fuchsia-500', 
-        badge: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/60 dark:text-fuchsia-200 border-fuchsia-300', 
-        tint: 'bg-fuchsia-50/40 dark:bg-fuchsia-950/20' 
+        border: 'border-l-fuchsia-600', 
+        badge: 'bg-fuchsia-100 text-fuchsia-950 border-fuchsia-300 dark:bg-fuchsia-950/70 dark:text-fuchsia-200', 
+        tint: 'bg-fuchsia-50/70 dark:bg-fuchsia-950/30' 
       },
       Spiritual: { 
-        border: 'border-l-teal-500', 
-        badge: 'bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-200 border-teal-300', 
-        tint: 'bg-teal-50/40 dark:bg-teal-950/20' 
+        border: 'border-l-teal-600', 
+        badge: 'bg-teal-100 text-teal-950 border-teal-300 dark:bg-teal-950/70 dark:text-teal-200', 
+        tint: 'bg-teal-50/70 dark:bg-teal-950/30' 
       },
       None: { 
         border: 'border-l-slate-400', 
-        badge: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300', 
-        tint: 'bg-slate-50/30 dark:bg-slate-900/40' 
+        badge: 'bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200', 
+        tint: 'bg-slate-100/50 dark:bg-slate-900/50' 
       }
     };
 
     const PRIORITIES = [
-      { level: 0, label: 'None', badge: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
-      { level: 1, label: '⚡ Medium', badge: 'bg-amber-400 text-slate-950 font-bold' },
-      { level: 2, label: '🚨 High', badge: 'bg-red-600 text-white font-bold' }
+      { level: 0, label: 'None', badge: 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200' },
+      { level: 1, label: '⚡ Medium', badge: 'bg-amber-400 text-slate-950 font-black' },
+      { level: 2, label: '🚨 High', badge: 'bg-red-600 text-white font-black' }
     ];
 
     const DEMO_PROJECTS = [
       {
         id: 'demo-1',
         name: 'Q3 Strategic Roadmap',
-        briefStatus: 'Executing core milestones and cross-team alignment.',
+        briefStatus: 'Executing core milestones and cross-team alignment for maximum productivity.',
         category: 'Work',
         priority: 2,
         status: 'active',
@@ -167,7 +168,7 @@
       {
         id: 'demo-2',
         name: 'Drip Irrigation Setup',
-        briefStatus: 'Planning garden bed perimeter and supply list.',
+        briefStatus: 'Planning garden bed perimeter and ordering required valves and regulators.',
         category: 'Personal',
         priority: 1,
         status: 'active',
@@ -191,34 +192,58 @@
       });
     };
 
-    // --- REUSABLE INPUT COMPONENTS WITH GUARDRAILS ---
-    const AutoSaveInput = ({ value, onSave, placeholder, className, onFocus, onBlur }) => {
+    // --- DEBOUNCED INPUT COMPONENTS WITH ACCESSIBLE TEXT SIZES ---
+    const AutoSaveInput = ({ value, onSave, placeholder, className, maxLength = MAX_NAME_LENGTH }) => {
       const [val, setVal] = useState(value || '');
+      const timerRef = useRef(null);
+
       useEffect(() => setVal(value || ''), [value]);
+
+      const debouncedSave = (newValue) => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+          if (newValue !== value) onSave(newValue);
+        }, 300);
+      };
+
+      const handleChange = (e) => {
+        let text = e.target.value;
+        if (maxLength && text.length > maxLength) text = text.slice(0, maxLength);
+        setVal(text);
+        debouncedSave(text);
+      };
 
       const handlePaste = (e) => {
         e.preventDefault();
         const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
-        setVal(plainText);
+        let text = plainText;
+        if (maxLength && text.length > maxLength) text = text.slice(0, maxLength);
+        setVal(text);
+        debouncedSave(text);
       };
 
       return (
         <input
           type="text"
           value={val}
+          maxLength={maxLength}
           placeholder={placeholder}
-          onChange={(e) => setVal(e.target.value)}
+          onChange={handleChange}
           onPaste={handlePaste}
-          onBlur={(e) => { onSave(val); if (onBlur) onBlur(e); }}
-          onFocus={onFocus}
-          className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 ${className}`}
+          onBlur={() => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+            if (val !== value) onSave(val);
+          }}
+          className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-1 ${className}`}
         />
       );
     };
 
-    const AutoResizeTextarea = ({ value, onSave, placeholder, className, maxLength }) => {
+    // Auto-expanding textarea that displays full content cleanly without scrollbars or cutoffs
+    const AutoResizeTextarea = ({ value, onSave, onKeyDown, id, placeholder, className, maxLength = MAX_NOTE_LENGTH, onFocus }) => {
       const [val, setVal] = useState(value || '');
       const textareaRef = useRef(null);
+      const timerRef = useRef(null);
 
       useEffect(() => setVal(value || ''), [value]);
 
@@ -229,35 +254,50 @@
         }
       }, [val]);
 
+      const debouncedSave = (newValue) => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+          if (newValue !== value) onSave(newValue);
+        }, 300);
+      };
+
+      const handleChange = (e) => {
+        let text = e.target.value;
+        if (maxLength && text.length > maxLength) text = text.slice(0, maxLength);
+        setVal(text);
+        debouncedSave(text);
+      };
+
       const handlePaste = (e) => {
         e.preventDefault();
         const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
-        const target = e.target;
-        const start = target.selectionStart;
-        const end = target.selectionEnd;
-        const currentVal = target.value;
-        let newVal = currentVal.substring(0, start) + plainText + currentVal.substring(end);
-        if (maxLength && newVal.length > maxLength) {
-          newVal = newVal.slice(0, maxLength);
-        }
-        setVal(newVal);
+        let text = plainText;
+        if (maxLength && text.length > maxLength) text = text.slice(0, maxLength);
+        setVal(text);
+        debouncedSave(text);
       };
 
       return (
         <div className="relative w-full">
           <textarea
+            id={id}
             ref={textareaRef}
             rows={1}
             value={val}
             maxLength={maxLength}
             placeholder={placeholder}
-            onChange={(e) => setVal(e.target.value)}
+            onFocus={onFocus}
+            onChange={handleChange}
+            onKeyDown={(e) => { if (onKeyDown) onKeyDown(e, val); }}
             onPaste={handlePaste}
-            onBlur={() => { if (val !== value) onSave(val); }}
-            className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 leading-relaxed ${className}`}
+            onBlur={() => {
+              if (timerRef.current) clearTimeout(timerRef.current);
+              if (val !== value) onSave(val);
+            }}
+            className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-1 leading-relaxed ${className}`}
           />
           {maxLength && val.length > maxLength * 0.8 && (
-            <span className={`text-[10px] font-mono absolute right-0 -bottom-4 ${val.length >= maxLength ? 'text-red-500 font-bold' : 'text-slate-400'}`}>
+            <span className={`text-[10px] font-mono absolute right-0 -bottom-3.5 ${val.length >= maxLength ? 'text-red-500 font-bold' : 'text-slate-400'}`}>
               {val.length}/{maxLength}
             </span>
           )}
@@ -268,7 +308,7 @@
     // --- MAIN APP COMPONENT ---
     function App() {
       const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('tracker_theme') === 'dark');
-      const [currentView, setCurrentView] = useState('active'); // active | paused | completed
+      const [currentView, setCurrentView] = useState('active');
       const [projects, setProjects] = useState([]);
       const [loading, setLoading] = useState(true);
       const [user, setUser] = useState(null);
@@ -279,11 +319,23 @@
 
       // Filters & Reordering
       const [priorityFilter, setPriorityFilter] = useState('all');
-      const [sortBy, setSortBy] = useState('manual'); // manual | priority-desc | priority-asc
+      const [sortBy, setSortBy] = useState('manual');
+
+      // Stress Suite State
+      const [showStressSuite, setShowStressSuite] = useState(false);
+      const [renderTimeMs, setRenderTimeMs] = useState(0);
+      const [stressLogs, setStressLogs] = useState([]);
 
       // Mobile UI States
       const [expandedProjectId, setExpandedProjectId] = useState(null);
       const [activeStepId, setActiveStepId] = useState(null);
+
+      const renderStart = useRef(performance.now());
+      useEffect(() => {
+        const renderEnd = performance.now();
+        setRenderTimeMs((renderEnd - renderStart.current).toFixed(1));
+        renderStart.current = performance.now();
+      });
 
       useEffect(() => {
         const handleOnline = () => setIsOnline(true);
@@ -338,21 +390,6 @@
             };
           });
 
-          // Self-healing index fix if items lack orderIndex
-          const needsIndexing = loaded.some(p => p.orderIndex === 0);
-          if (needsIndexing && loaded.length > 0) {
-            const batch = db.batch();
-            loaded.forEach((p, idx) => {
-              if (p.orderIndex === 0) {
-                const docRef = userProjectsRef.doc(p.id);
-                const newIdx = (idx + 1) * 100;
-                batch.update(docRef, { orderIndex: newIdx });
-                p.orderIndex = newIdx;
-              }
-            });
-            batch.commit().catch(() => {});
-          }
-
           setProjects(loaded);
           setLoading(false);
         }, (err) => {
@@ -368,6 +405,10 @@
         if (isDarkMode) document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
       }, [isDarkMode]);
+
+      const logStress = (msg) => {
+        setStressLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev.slice(0, 15)]);
+      };
 
       const handleGoogleLogin = async () => {
         try {
@@ -459,7 +500,7 @@
         batch.commit();
       };
 
-      // Purge mechanisms
+      // --- PURGE MECHANISMS ---
       const purgeProjectSubSteps = (projectId, field) => {
         const proj = projects.find(p => p.id === projectId);
         if (!proj) return;
@@ -470,7 +511,7 @@
       const bulkPurgeCompletedProjects = () => {
         const completedProjects = projects.filter(p => p.status === 'completed');
         if (completedProjects.length === 0) return;
-        if (!confirm(`Delete all ${completedProjects.length} projects in Completed view?`)) return;
+        if (!confirm(`Delete all ${completedProjects.length} completed projects?`)) return;
 
         if (isDemoMode) {
           setProjects(prev => prev.filter(p => p.status !== 'completed'));
@@ -478,11 +519,47 @@
         }
 
         if (!user || !db) return;
-        const batch = db.batch();
-        completedProjects.forEach(p => {
-          batch.delete(db.collection('users').doc(user.uid).collection('projects').doc(p.id));
+
+        const chunks = [];
+        for (let i = 0; i < completedProjects.length; i += MAX_BATCH_OPERATIONS) {
+          chunks.push(completedProjects.slice(i, i + MAX_BATCH_OPERATIONS));
+        }
+
+        chunks.forEach(chunk => {
+          const batch = db.batch();
+          chunk.forEach(p => {
+            batch.delete(db.collection('users').doc(user.uid).collection('projects').doc(p.id));
+          });
+          batch.commit();
         });
-        batch.commit();
+      };
+
+      // --- STRESS TEST SUITE ---
+      const runMassProjectGenerator = (count = 50) => {
+        logStress(`Generating ${count} projects in memory...`);
+        const generated = [];
+
+        for (let i = 1; i <= count; i++) {
+          generated.push({
+            id: `stress-${Date.now()}-${i}`,
+            name: `Stress Project #${i} - ${['Engine Audit', 'Database Indexing', 'API Gateway', 'UI Polish', 'Security Review'][i % 5]}`,
+            briefStatus: `Automated test payload #${i}. Testing high density DOM rendering.`,
+            category: CATEGORIES[i % CATEGORIES.length],
+            priority: i % 3,
+            status: i % 4 === 0 ? 'paused' : (i % 5 === 0 ? 'completed' : 'active'),
+            orderIndex: i * 100,
+            nextSteps: [
+              { id: `st-${i}-1`, text: `Execute step A for benchmark #${i}`, completed: i % 2 === 0, indent: 0 },
+              { id: `st-${i}-2`, text: `Verify latency threshold #${i}`, completed: false, indent: 1 }
+            ],
+            notes: [
+              { id: `nt-${i}-1`, text: `Note entry with payload string #${i}.`, completed: false, indent: 0 }
+            ]
+          });
+        }
+
+        setProjects(prev => [...prev, ...generated]);
+        logStress(`Generated ${count} projects. Total: ${projects.length + count}`);
       };
 
       const handleRowClick = (e, projectId) => {
@@ -490,6 +567,7 @@
         setExpandedProjectId(prev => prev === projectId ? null : projectId);
       };
 
+      // --- RENDER SUB-LIST (ENTER KEY CREATES NEXT CHECKBOX FOR BOTH TASKS AND NOTES) ---
       const renderSubList = (project, field) => {
         const items = normalizeSteps(project[field]);
 
@@ -510,6 +588,7 @@
           updateProjectField(project.id, field, updated);
         };
 
+        // ENTER KEY HANDLER FOR TASKS & NOTES (Creates next checkbox & auto-focuses)
         const handleKeyDown = (e, index, currentText) => {
           if (e.key === 'Enter') {
             e.preventDefault();
@@ -523,6 +602,8 @@
             };
             updated.splice(index + 1, 0, newStep);
             updateProjectField(project.id, field, updated);
+            
+            // Auto-focus the newly created checkbox input field
             setTimeout(() => {
               const nextInput = document.getElementById(`step-input-${project.id}-${field}-${index + 1}`);
               if (nextInput) nextInput.focus();
@@ -560,50 +641,53 @@
         const indentStyles = [
           'ml-0', 
           'ml-4 border-l-2 border-slate-300 dark:border-slate-700 pl-2', 
-          'ml-8 border-l-2 border-amber-400/80 pl-2'
+          'ml-8 border-l-2 border-amber-500 pl-2'
         ];
 
         return (
-          <div className="space-y-2 md:space-y-1.5">
+          <div className="space-y-2.5">
             {items.map((step, idx) => (
               <div key={step.id || idx} className={`group/step flex flex-col transition-all ${indentStyles[step.indent || 0]}`}>
-                <div className="flex items-start gap-1.5 md:gap-2">
-                  <div className="hidden md:flex flex-col text-[9px] text-slate-400 opacity-20 group-hover/step:opacity-100 transition pt-1">
-                    <button onClick={() => moveStep(idx, 'up')} disabled={idx === 0} className="hover:text-amber-500 leading-none disabled:opacity-10">▲</button>
-                    <button onClick={() => moveStep(idx, 'down')} disabled={idx === items.length - 1} className="hover:text-amber-500 leading-none disabled:opacity-10">▼</button>
+                <div className="flex items-start gap-2">
+                  <div className="hidden md:flex flex-col text-[11px] text-slate-500 opacity-30 group-hover/step:opacity-100 transition pt-1">
+                    <button onClick={() => moveStep(idx, 'up')} disabled={idx === 0} className="hover:text-amber-600 leading-none disabled:opacity-10 p-0.5">▲</button>
+                    <button onClick={() => moveStep(idx, 'down')} disabled={idx === items.length - 1} className="hover:text-amber-600 leading-none disabled:opacity-10 p-0.5">▼</button>
                   </div>
 
                   <input 
                     type="checkbox" 
                     checked={!!step.completed} 
                     onChange={() => toggleStepComplete(idx)} 
-                    className="mt-1.5 md:mt-1 h-4 w-4 md:h-3.5 md:w-3.5 rounded border-slate-300 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" 
+                    className="mt-1.5 h-4 w-4 rounded border-slate-400 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" 
                   />
                   
+                  {/* High readability text size (text-base md:text-sm) */}
                   <AutoResizeTextarea
+                    id={`step-input-${project.id}-${field}-${idx}`}
                     value={step.text}
                     maxLength={MAX_NOTE_LENGTH}
-                    placeholder={field === 'nextSteps' ? "Type action step..." : "Type note..."}
+                    placeholder={field === 'nextSteps' ? "Type action step (Press Enter for next)..." : "Type note (Press Enter for next)..."}
                     onSave={(val) => updateStepText(idx, val)}
+                    onKeyDown={(e, currentVal) => handleKeyDown(e, idx, currentVal)}
                     onFocus={() => setActiveStepId(step.id)}
-                    className={`text-sm md:text-xs py-0.5 ${step.completed ? 'line-through text-slate-400 dark:text-slate-500' : isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                    className={`text-base md:text-sm py-0.5 ${step.completed ? 'line-through text-slate-400 dark:text-slate-500' : isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}
                   />
                 </div>
 
                 {/* Mobile Formatting Ribbon */}
                 {activeStepId === step.id && (
-                  <div className="md:hidden flex items-center justify-start gap-3 mt-1 mb-2 ml-6">
-                    <div className="flex bg-slate-200 dark:bg-slate-800 rounded-lg overflow-hidden shadow-sm text-xs">
-                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'up'); }} disabled={idx === 0} className="px-3 py-1 text-slate-700 dark:text-slate-300 disabled:opacity-30 border-r border-slate-300 dark:border-slate-700">▲ Up</button>
-                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'down'); }} disabled={idx === items.length - 1} className="px-3 py-1 text-slate-700 dark:text-slate-300 disabled:opacity-30 border-r border-slate-300 dark:border-slate-700">▼ Down</button>
-                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'left'); }} disabled={(step.indent || 0) === 0} className="px-3 py-1 text-slate-700 dark:text-slate-300 disabled:opacity-30 border-r border-slate-300 dark:border-slate-700">⇥ Outdent</button>
-                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'right'); }} disabled={(step.indent || 0) === 2} className="px-3 py-1 text-slate-700 dark:text-slate-300 disabled:opacity-30">Indent ⇤</button>
+                  <div className="md:hidden flex items-center justify-start gap-3 mt-1.5 mb-2 ml-6">
+                    <div className="flex bg-slate-200 dark:bg-slate-800 rounded-lg overflow-hidden shadow-sm text-xs font-bold">
+                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'up'); }} disabled={idx === 0} className="px-3 py-1.5 text-slate-800 dark:text-slate-200 border-r border-slate-300 dark:border-slate-700">▲ Up</button>
+                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'down'); }} disabled={idx === items.length - 1} className="px-3 py-1.5 text-slate-800 dark:text-slate-200 border-r border-slate-300 dark:border-slate-700">▼ Down</button>
+                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'left'); }} disabled={(step.indent || 0) === 0} className="px-3 py-1.5 text-slate-800 dark:text-slate-200 border-r border-slate-300 dark:border-slate-700">⇥ Outdent</button>
+                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'right'); }} disabled={(step.indent || 0) === 2} className="px-3 py-1.5 text-slate-800 dark:text-slate-200">Indent ⇤</button>
                     </div>
                   </div>
                 )}
               </div>
             ))}
-            <button onClick={addEmptyStep} className="text-[12px] md:text-[11px] text-amber-600 dark:text-amber-400 hover:underline font-semibold mt-2 md:mt-1 inline-flex items-center gap-1">
+            <button onClick={addEmptyStep} className="text-sm md:text-xs text-amber-700 dark:text-amber-400 hover:underline font-bold mt-2 inline-flex items-center gap-1">
               + Add Item
             </button>
           </div>
@@ -640,46 +724,43 @@
           <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 font-sans">
             <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
               
-              {/* Left Column: Value Prop */}
               <div className="md:col-span-7 space-y-6 text-left">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                  ADHD-Friendly Execution
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  High Visibility & ADHD Friendly
                 </div>
 
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white uppercase leading-tight">
                   PERSONAL PROJECT TRACKER
                 </h1>
 
-                <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-                  Cut through administrative clutter. A low-friction, single-board workspace designed to see what’s next, sequence priorities, and execute momentum—across all your devices.
+                <p className="text-slate-300 text-base sm:text-lg leading-relaxed">
+                  Low-friction execution. Designed with high-contrast text, clear typography, and color-coded row banners for zero visual fatigue.
                 </p>
 
-                {/* Feature Highlights Grid */}
                 <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-                    <div className="text-xs font-bold text-amber-400 uppercase">⚡ Zero Friction</div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Auto-saving fields & key shortcuts.</p>
+                  <div className="p-3.5 bg-slate-900/80 rounded-xl border border-slate-800">
+                    <div className="text-sm font-extrabold text-amber-400 uppercase">⚡ Easy Enter Keys</div>
+                    <p className="text-xs text-slate-400 mt-1">Instant checkbox creation on Enter.</p>
                   </div>
-                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-                    <div className="text-xs font-bold text-emerald-400 uppercase">🎨 Visual Tinting</div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Color-coded category domains.</p>
+                  <div className="p-3.5 bg-slate-900/80 rounded-xl border border-slate-800">
+                    <div className="text-sm font-extrabold text-emerald-400 uppercase">🎨 Color Domain Tints</div>
+                    <p className="text-xs text-slate-400 mt-1">Translucent row banners for eye tracking.</p>
                   </div>
-                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-                    <div className="text-xs font-bold text-blue-400 uppercase">📊 Single-Board</div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Unified views for Active & Paused.</p>
+                  <div className="p-3.5 bg-slate-900/80 rounded-xl border border-slate-800">
+                    <div className="text-sm font-extrabold text-blue-400 uppercase">👁️ High Legibility</div>
+                    <p className="text-xs text-slate-400 mt-1">Large typography for quick scanning.</p>
                   </div>
-                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-                    <div className="text-xs font-bold text-purple-400 uppercase">🧹 Auto Purge</div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">One-click cleanup for done items.</p>
+                  <div className="p-3.5 bg-slate-900/80 rounded-xl border border-slate-800">
+                    <div className="text-sm font-extrabold text-purple-400 uppercase">🧹 Clean Purging</div>
+                    <p className="text-xs text-slate-400 mt-1">One-click cleanup for completed tasks.</p>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: Auth Card */}
               <div className="md:col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 text-center">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Workspace Access</h2>
+                  <h2 className="text-2xl font-black text-white">Workspace Access</h2>
                   <p className="text-xs text-slate-400 mt-1">Sign in with your Google account to sync your project board live.</p>
                 </div>
 
@@ -694,7 +775,7 @@
                       onClick={handleGoogleLogin} 
                       className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-bold py-3.5 px-4 rounded-xl shadow transition text-sm"
                     >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
@@ -705,7 +786,7 @@
 
                     <div className="relative flex py-2 items-center">
                       <div className="flex-grow border-t border-slate-800"></div>
-                      <span className="flex-shrink-0 mx-3 text-slate-500 text-[10px] font-bold uppercase">Or Test Local</span>
+                      <span className="flex-shrink-0 mx-3 text-slate-500 text-xs font-bold uppercase">Or Test Sandbox</span>
                       <div className="flex-grow border-t border-slate-800"></div>
                     </div>
 
@@ -718,8 +799,8 @@
                   </div>
                 )}
 
-                <div className="pt-2 text-[11px] text-slate-500">
-                  🔒 Private & Secure. Data indexed directly under your account scope.
+                <div className="pt-2 text-xs text-slate-500">
+                  🔒 Private & Secure. Authenticated directly via Firebase.
                 </div>
               </div>
 
@@ -732,93 +813,106 @@
       // MAIN DASHBOARD (AUTHENTICATED / DEMO WORKSPACE)
       // =========================================================================
       return (
-        <div className="max-w-[1440px] mx-auto p-4 md:p-6 space-y-5">
+        <div className="max-w-[1480px] mx-auto p-4 md:p-6 space-y-5">
           
           {/* HEADER BAR */}
-          <header className="flex flex-col md:flex-row flex-wrap justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <header className="flex flex-col md:flex-row flex-wrap justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
             
             <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-              <h1 className="text-lg md:text-xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
+              <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
                 PERSONAL PROJECT TRACKER
               </h1>
               
               {isDemoMode ? (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950/60 dark:text-purple-400">
-                  🧪 Demo Mode (Local)
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full border bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300">
+                  🧪 Demo Mode
                 </span>
               ) : !isOnline ? (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-500 text-slate-950 border-amber-600 animate-pulse">
-                  📡 Offline Mode
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full border bg-amber-500 text-slate-950 border-amber-600 animate-pulse">
+                  📡 Offline
                 </span>
               ) : hasPendingWrites ? (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-300">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full border bg-blue-50 text-blue-700 border-blue-300">
                   🔄 Syncing...
                 </span>
               ) : (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-400">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-400">
                   ☁️ Live Cloud Sync
                 </span>
               )}
             </div>
 
             {/* GLOBAL VIEW SWITCHER TABS */}
-            <div className="flex items-center w-full md:w-auto bg-slate-100 dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0">
+            <div className="flex items-center w-full md:w-auto bg-slate-100 dark:bg-slate-950 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
               <button 
                 onClick={() => setCurrentView('active')} 
-                className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-md text-xs font-bold transition flex justify-center items-center gap-1.5 ${currentView === 'active' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+                className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-xs md:text-sm font-extrabold transition flex justify-center items-center gap-2 ${currentView === 'active' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
               >
-                Active <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{activeCount}</span>
+                Active <span className="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full font-bold">{activeCount}</span>
               </button>
               <button 
                 onClick={() => setCurrentView('paused')} 
-                className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-md text-xs font-bold transition flex justify-center items-center gap-1.5 ${currentView === 'paused' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+                className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-xs md:text-sm font-extrabold transition flex justify-center items-center gap-2 ${currentView === 'paused' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
               >
-                Paused <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{pausedCount}</span>
+                Paused <span className="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full font-bold">{pausedCount}</span>
               </button>
               <button 
                 onClick={() => setCurrentView('completed')} 
-                className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-md text-xs font-bold transition flex justify-center items-center gap-1.5 ${currentView === 'completed' ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+                className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-xs md:text-sm font-extrabold transition flex justify-center items-center gap-2 ${currentView === 'completed' ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
               >
-                Completed <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{completedCount}</span>
+                Completed <span className="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full font-bold">{completedCount}</span>
               </button>
             </div>
 
-            {/* CONTROLS & ACTIONS */}
-            <div className="flex flex-wrap items-center justify-between w-full md:w-auto gap-2.5">
+            {/* PROMINENT HIGH-CONTRAST FILTER & SORT CONTROLS */}
+            <div className="flex flex-wrap items-center justify-between w-full md:w-auto gap-3">
               
-              {/* Priority Filter */}
-              <select 
-                value={priorityFilter} 
-                onChange={(e) => setPriorityFilter(e.target.value)} 
-                className="bg-slate-100 dark:bg-slate-800 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer"
-              >
-                <option value="all">All Priorities</option>
-                <option value="2">🚨 High Priority</option>
-                <option value="1">⚡ Medium Priority</option>
-                <option value="0">Normal</option>
-              </select>
+              {/* Prominent Filter Dropdown */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 shadow-sm">
+                <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase mr-2">Filter:</span>
+                <select 
+                  value={priorityFilter} 
+                  onChange={(e) => setPriorityFilter(e.target.value)} 
+                  className="bg-transparent text-xs md:text-sm font-extrabold text-slate-900 dark:text-white cursor-pointer pr-1"
+                >
+                  <option value="all" className="bg-white text-slate-900 font-bold">All Priorities</option>
+                  <option value="2" className="bg-white text-slate-900 font-bold">🚨 High Priority</option>
+                  <option value="1" className="bg-white text-slate-900 font-bold">⚡ Medium Priority</option>
+                  <option value="0" className="bg-white text-slate-900 font-bold">Normal</option>
+                </select>
+              </div>
 
-              {/* Sort Selector */}
-              <select 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value)} 
-                className="bg-slate-100 dark:bg-slate-800 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer"
+              {/* Prominent Sort Dropdown */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 shadow-sm">
+                <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase mr-2">Sort:</span>
+                <select 
+                  value={sortBy} 
+                  onChange={(e) => setSortBy(e.target.value)} 
+                  className="bg-transparent text-xs md:text-sm font-extrabold text-slate-900 dark:text-white cursor-pointer pr-1"
+                >
+                  <option value="manual" className="bg-white text-slate-900 font-bold">Manual Order</option>
+                  <option value="priority-desc" className="bg-white text-slate-900 font-bold">Priority: High → Low</option>
+                  <option value="priority-asc" className="bg-white text-slate-900 font-bold">Priority: Low → High</option>
+                </select>
+              </div>
+
+              <button 
+                onClick={() => setShowStressSuite(!showStressSuite)}
+                className={`px-3 py-2 rounded-xl text-xs font-black border-2 transition ${showStressSuite ? 'bg-purple-600 text-white border-purple-700' : 'bg-purple-50 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300 border-purple-300 dark:border-purple-800'}`}
               >
-                <option value="manual">Manual Order</option>
-                <option value="priority-desc">Priority: High → Low</option>
-                <option value="priority-asc">Priority: Low → High</option>
-              </select>
+                🧪 Stress Suite
+              </button>
 
               <button 
                 onClick={() => setIsDarkMode(!isDarkMode)} 
-                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold"
+                className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-black"
               >
                 {isDarkMode ? '☀️ Light' : '🌙 Dark'}
               </button>
 
               <button 
                 onClick={addProject} 
-                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg text-xs shadow transition"
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-4 py-2 rounded-xl text-xs md:text-sm shadow transition"
               >
                 + New Project
               </button>
@@ -826,7 +920,7 @@
               {currentView === 'completed' && completedCount > 0 && (
                 <button 
                   onClick={bulkPurgeCompletedProjects} 
-                  className="bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-bold px-3 py-1.5 rounded-lg text-xs border border-red-300 dark:border-red-800 transition"
+                  className="bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-black px-3.5 py-2 rounded-xl text-xs border border-red-300 dark:border-red-800 transition"
                 >
                   🧹 Clear Completed
                 </button>
@@ -835,13 +929,13 @@
               {(user || isDemoMode) && (
                 <div className="flex items-center gap-2 ml-auto md:ml-0">
                   {user?.photoURL ? (
-                    <img src={user.photoURL} className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-700" alt="Avatar" />
+                    <img src={user.photoURL} className="w-8 h-8 rounded-full border border-slate-300 dark:border-slate-700" alt="Avatar" />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-slate-300 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <div className="w-8 h-8 rounded-full bg-slate-300 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300">
                       {isDemoMode ? 'D' : '?'}
                     </div>
                   )}
-                  <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-red-500 font-semibold transition hidden md:block">
+                  <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-red-500 font-extrabold transition hidden md:block">
                     {isDemoMode ? 'Exit Demo' : 'Sign Out'}
                   </button>
                 </div>
@@ -849,29 +943,54 @@
             </div>
           </header>
 
+          {/* STRESS TEST & BENCHMARK SUITE PANEL */}
+          {showStressSuite && (
+            <div className="bg-slate-900 text-slate-100 p-4 rounded-xl border border-purple-800/80 shadow-2xl space-y-4 transition-all">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-500 pulse-hud"></span>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-purple-300">Stress Test & Performance Suite</h3>
+                </div>
+                <div className="text-xs font-mono text-slate-400 flex items-center gap-3">
+                  <span>Render Time: <strong className="text-amber-400">{renderTimeMs}ms</strong></span>
+                  <span>Total Projects: <strong className="text-emerald-400">{projects.length}</strong></span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <button onClick={() => runMassProjectGenerator(50)} className="bg-purple-900/60 hover:bg-purple-900 text-purple-200 border border-purple-700 px-3 py-2 rounded-lg text-xs font-bold text-left transition">
+                  ⚡ Add 50 Test Projects
+                </button>
+                <button onClick={() => setProjects([])} className="bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-800 px-3 py-2 rounded-lg text-xs font-bold text-left transition">
+                  🗑️ Clear All Projects
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* TABLE CONTAINER */}
-          <div className="md:bg-white md:dark:bg-slate-900 md:rounded-xl md:border md:border-slate-200 md:dark:border-slate-800 md:shadow-sm overflow-x-hidden md:overflow-x-auto">
+          <div className="md:bg-white md:dark:bg-slate-900 md:rounded-2xl md:border-2 md:border-slate-300 md:dark:border-slate-800 md:shadow-sm overflow-x-hidden md:overflow-x-auto">
             {loading ? (
-              <div className="p-12 text-center text-xs font-mono text-slate-400 bg-white dark:bg-slate-900 rounded-xl">Loading workspace...</div>
+              <div className="p-12 text-center text-sm font-mono text-slate-400 bg-white dark:bg-slate-900 rounded-2xl">Loading workspace...</div>
             ) : (
-              <div className="block md:table w-full text-left border-collapse md:min-w-[1100px]">
+              <div className="block md:table w-full text-left border-collapse md:min-w-[1150px]">
                 
                 {/* Desktop Table Header */}
                 <div className="hidden md:table-header-group">
-                  <div className="md:table-row border-b border-slate-300 dark:border-slate-700 bg-amber-400 text-amber-950 text-[11px] font-extrabold uppercase tracking-wider">
-                    <div className="md:table-cell p-3.5 w-[22%]">Project Name</div>
-                    <div className="md:table-cell p-3.5 w-[20%]">Status Brief</div>
-                    <div className="md:table-cell p-3.5 w-[28%]">Next Steps</div>
-                    <div className="md:table-cell p-3.5 w-[14%]">Details</div>
-                    <div className="md:table-cell p-3.5 w-[16%]">Notes</div>
+                  <div className="md:table-row border-b-2 border-slate-300 dark:border-slate-700 bg-amber-400 text-amber-950 text-xs md:text-sm font-black uppercase tracking-wider">
+                    <div className="md:table-cell p-4 w-[22%]">Project Name</div>
+                    <div className="md:table-cell p-4 w-[20%]">Status Brief</div>
+                    <div className="md:table-cell p-4 w-[28%]">Next Steps</div>
+                    <div className="md:table-cell p-4 w-[14%]">Details</div>
+                    <div className="md:table-cell p-4 w-[16%]">Notes</div>
                   </div>
                 </div>
 
                 <div className="block md:table-row-group">
                   {displayedProjects.length === 0 ? (
-                    <div className="block md:table-row bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                      <div className="md:table-cell p-12 text-center text-slate-400 text-sm">
-                        No projects found in <strong>{currentView}</strong> view. Click "+ New Project" to get started.
+                    <div className="block md:table-row bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                      <div className="md:table-cell p-12 text-center text-slate-500 text-base font-semibold">
+                        No projects found in <strong>{currentView}</strong> view. Click "+ New Project" to start.
                       </div>
                     </div>
                   ) : (
@@ -883,59 +1002,61 @@
                       return (
                         <div 
                           key={p.id} 
-                          className={`block md:table-row bg-white dark:bg-slate-900 ${colorScheme.tint} border border-slate-200 dark:border-slate-800 mb-4 md:mb-0 rounded-xl md:rounded-none overflow-hidden transition md:border-x-0 md:border-t-0 md:border-b hover:bg-slate-50 md:dark:hover:bg-slate-800/60`}
+                          className={`block md:table-row bg-white dark:bg-slate-900 ${colorScheme.tint} border-2 border-slate-200 dark:border-slate-800 mb-4 md:mb-0 rounded-2xl md:rounded-none overflow-hidden transition md:border-x-0 md:border-t-0 md:border-b hover:bg-slate-100/80 md:dark:hover:bg-slate-800/80`}
                         >
                           
-                          {/* 1. PROJECT NAME */}
+                          {/* 1. PROJECT NAME & NEUTRAL ACTION LINKS */}
                           <div 
                             onClick={(e) => handleRowClick(e, p.id)}
-                            className={`block md:table-cell p-4 md:p-3.5 align-top cursor-pointer md:cursor-default border-l-4 ${colorScheme.border} md:border-r ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'} ${isExpanded ? 'bg-slate-50 dark:bg-slate-800/40 md:bg-transparent' : ''}`}
+                            className={`block md:table-cell p-4.5 align-top cursor-pointer md:cursor-default border-l-8 ${colorScheme.border} md:border-r ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'} ${isExpanded ? 'bg-slate-100 dark:bg-slate-800/60 md:bg-transparent' : ''}`}
                           >
-                            <div className="flex items-start gap-3 md:gap-2">
+                            <div className="flex items-start gap-3">
                               
-                              {/* Reorder Buttons (Manual Mode) */}
+                              {/* Reorder Controls (Larger, prominent arrows) */}
                               {isManualOrderingActive && (
-                                <div className="hidden md:flex flex-col text-[10px] text-slate-400 font-bold pt-0.5 opacity-40 hover:opacity-100 transition">
-                                  <button onClick={() => moveProject(index, 'up')} disabled={index === 0} className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20">▲</button>
-                                  <button onClick={() => moveProject(index, 'down')} disabled={index === displayedProjects.length - 1} className="hover:text-amber-500 leading-none p-0.5 disabled:opacity-20">▼</button>
+                                <div className="hidden md:flex flex-col text-sm font-black text-slate-500 pt-0.5 opacity-60 hover:opacity-100 transition">
+                                  <button onClick={() => moveProject(index, 'up')} disabled={index === 0} className="hover:text-amber-600 leading-none p-0.5 disabled:opacity-10" title="Move Up">▲</button>
+                                  <button onClick={() => moveProject(index, 'down')} disabled={index === displayedProjects.length - 1} className="hover:text-amber-600 leading-none p-0.5 disabled:opacity-10" title="Move Down">▼</button>
                                 </div>
                               )}
 
                               <div className="flex-1 min-w-0">
+                                {/* Increased font size (text-xl md:text-lg font-extrabold) */}
                                 <AutoSaveInput 
                                   value={p.name} 
+                                  maxLength={MAX_NAME_LENGTH}
                                   placeholder="Project Name..." 
                                   onSave={(v) => updateProjectField(p.id, 'name', v)} 
-                                  className={`font-bold text-lg md:text-base ${isDarkMode ? 'text-white' : 'text-slate-900'} cursor-text`} 
+                                  className={`font-black text-xl md:text-lg ${isDarkMode ? 'text-white' : 'text-slate-900'} cursor-text`} 
                                 />
                                 
-                                {/* Status Toggle Links */}
-                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs md:text-[11px] font-semibold">
+                                {/* NEUTRAL GRAY ACTION LINKS (Prevents visual clash with category colors) */}
+                                <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs md:text-xs font-bold text-slate-500 dark:text-slate-400">
                                   {currentView === 'active' && (
                                     <>
-                                      <button onClick={() => setProjectStatus(p.id, 'paused')} className="text-amber-600 dark:text-amber-400 hover:underline">Pause</button>
+                                      <button onClick={() => setProjectStatus(p.id, 'paused')} className="hover:text-slate-900 dark:hover:text-slate-100 transition">Pause</button>
                                       <span className="text-slate-300 dark:text-slate-700">•</span>
-                                      <button onClick={() => setProjectStatus(p.id, 'completed')} className="text-emerald-600 dark:text-emerald-400 hover:underline">Complete</button>
+                                      <button onClick={() => setProjectStatus(p.id, 'completed')} className="hover:text-slate-900 dark:hover:text-slate-100 transition">Complete</button>
                                     </>
                                   )}
                                   {currentView === 'paused' && (
                                     <>
-                                      <button onClick={() => setProjectStatus(p.id, 'active')} className="text-blue-600 dark:text-blue-400 hover:underline">Resume</button>
+                                      <button onClick={() => setProjectStatus(p.id, 'active')} className="hover:text-slate-900 dark:hover:text-slate-100 transition">Resume</button>
                                       <span className="text-slate-300 dark:text-slate-700">•</span>
-                                      <button onClick={() => setProjectStatus(p.id, 'completed')} className="text-emerald-600 dark:text-emerald-400 hover:underline">Complete</button>
+                                      <button onClick={() => setProjectStatus(p.id, 'completed')} className="hover:text-slate-900 dark:hover:text-slate-100 transition">Complete</button>
                                     </>
                                   )}
                                   {currentView === 'completed' && (
-                                    <button onClick={() => setProjectStatus(p.id, 'active')} className="text-blue-600 dark:text-blue-400 hover:underline">Reactivate</button>
+                                    <button onClick={() => setProjectStatus(p.id, 'active')} className="hover:text-slate-900 dark:hover:text-slate-100 transition">Reactivate</button>
                                   )}
                                   <span className="text-slate-300 dark:text-slate-700">•</span>
-                                  <button onClick={() => deleteProject(p.id)} className="text-slate-400 hover:text-red-500">Delete</button>
+                                  <button onClick={() => deleteProject(p.id)} className="hover:text-red-600 transition">Delete</button>
                                 </div>
                               </div>
                               
                               {/* Mobile Chevron */}
                               <div className="md:hidden pt-1 text-slate-400">
-                                <svg className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className={`w-6 h-6 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                 </svg>
                               </div>
@@ -945,24 +1066,25 @@
                           {/* ACCORDION / RESPONSIVE WRAPPER */}
                           <div className={`md:contents ${isExpanded ? 'block' : 'hidden'}`}>
                             
-                            {/* 2. BRIEF STATUS */}
-                            <div className={`block md:table-cell p-4 md:p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
-                              <label className="md:hidden text-[10px] uppercase font-bold text-slate-400 block mb-1">Status Brief</label>
+                            {/* 2. BRIEF STATUS (Full content visible without cutoff) */}
+                            <div className={`block md:table-cell p-4.5 align-top border-t md:border-t-0 md:border-r border-slate-200 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
+                              <label className="md:hidden text-xs uppercase font-black text-slate-400 block mb-1">Status Brief</label>
                               <AutoResizeTextarea 
                                 value={p.briefStatus || ''} 
+                                maxLength={MAX_NOTE_LENGTH}
                                 placeholder="Status overview..." 
                                 onSave={(v) => updateProjectField(p.id, 'briefStatus', v)} 
-                                className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`} 
+                                className={`text-base md:text-sm font-medium leading-relaxed ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`} 
                               />
                             </div>
 
                             {/* 3. NEXT STEPS CHECKLIST */}
-                            <div className={`block md:table-cell p-4 md:p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
-                              <div className="flex justify-between items-center mb-2 md:mb-1">
-                                <label className="md:hidden text-[10px] uppercase font-bold text-slate-400 block">Next Steps</label>
+                            <div className={`block md:table-cell p-4.5 align-top border-t md:border-t-0 md:border-r border-slate-200 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
+                              <div className="flex justify-between items-center mb-2">
+                                <label className="md:hidden text-xs uppercase font-black text-slate-400 block">Next Steps</label>
                                 <button 
                                   onClick={() => purgeProjectSubSteps(p.id, 'nextSteps')} 
-                                  className="text-[10px] text-slate-400 hover:text-amber-500 font-semibold ml-auto"
+                                  className="text-xs text-slate-500 hover:text-amber-600 font-extrabold ml-auto"
                                 >
                                   🧹 Purge Done
                                 </button>
@@ -971,26 +1093,26 @@
                             </div>
 
                             {/* 4. DETAILS (PRIORITY & CATEGORY) */}
-                            <div className={`flex md:table-cell flex-row md:flex-col gap-3 p-4 md:p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
+                            <div className={`flex md:table-cell flex-row md:flex-col gap-3 p-4.5 align-top border-t md:border-t-0 md:border-r border-slate-200 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <div className="flex-1">
-                                <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Priority</label>
+                                <label className="text-xs uppercase font-black text-slate-400 block mb-1">Priority</label>
                                 <select 
                                   value={p.priority} 
                                   onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
-                                  className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer shadow-sm ${priorityMeta.badge}`}
+                                  className={`text-sm p-2 rounded-lg font-black border-2 w-full cursor-pointer shadow-sm ${priorityMeta.badge}`}
                                 >
                                   {PRIORITIES.map(opt => (
-                                    <option key={opt.level} value={opt.level} className="bg-white text-slate-900 font-semibold">{opt.label}</option>
+                                    <option key={opt.level} value={opt.level} className="bg-white text-slate-900 font-bold">{opt.label}</option>
                                   ))}
                                 </select>
                               </div>
 
                               <div className="flex-1">
-                                <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1 mt-0 md:mt-2">Category</label>
+                                <label className="text-xs uppercase font-black text-slate-400 block mb-1 mt-0 md:mt-2">Category</label>
                                 <select 
                                   value={p.category || 'None'} 
                                   onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
-                                  className={`text-xs p-1.5 rounded font-bold border w-full cursor-pointer ${colorScheme.badge}`}
+                                  className={`text-sm p-2 rounded-lg font-black border-2 w-full cursor-pointer ${colorScheme.badge}`}
                                 >
                                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
@@ -998,12 +1120,12 @@
                             </div>
 
                             {/* 5. NOTES */}
-                            <div className="block md:table-cell p-4 md:p-3.5 align-top border-t md:border-t-0 border-slate-100 dark:border-slate-800">
-                              <div className="flex justify-between items-center mb-2 md:mb-1">
-                                <label className="md:hidden text-[10px] uppercase font-bold text-slate-400 block">Notes</label>
+                            <div className="block md:table-cell p-4.5 align-top border-t md:border-t-0 border-slate-200 dark:border-slate-800">
+                              <div className="flex justify-between items-center mb-2">
+                                <label className="md:hidden text-xs uppercase font-black text-slate-400 block">Notes</label>
                                 <button 
                                   onClick={() => purgeProjectSubSteps(p.id, 'notes')} 
-                                  className="text-[10px] text-slate-400 hover:text-amber-500 font-semibold ml-auto"
+                                  className="text-xs text-slate-500 hover:text-amber-600 font-extrabold ml-auto"
                                 >
                                   🧹 Purge Done
                                 </button>
@@ -1031,10 +1153,10 @@
       render() {
         if (this.state.hasError) {
           return (
-            <div className="p-8 text-center max-w-md mx-auto my-12 bg-white dark:bg-slate-900 border rounded-2xl shadow-xl">
-              <h2 className="text-lg font-bold text-red-600 mb-2">Workspace Render Error</h2>
+            <div className="p-8 text-center max-w-md mx-auto my-12 bg-white dark:bg-slate-900 border-2 rounded-2xl shadow-xl">
+              <h2 className="text-lg font-black text-red-600 mb-2">Workspace Render Error</h2>
               <p className="text-xs text-slate-500 mb-4">A component state error occurred. Reloading will reset your view layout.</p>
-              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-amber-500 text-slate-950 font-bold rounded-lg text-xs">
+              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-amber-500 text-slate-950 font-black rounded-lg text-xs">
                 Reload Workspace
               </button>
             </div>
