@@ -1,4 +1,4 @@
-<!-- Version 1.7.0 - Professional Executive Redesign -->
+<!-- Version 1.8.0 - High Impact Landing & ADHD Clarity Release -->
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -32,7 +32,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <style>
-    /* Strictly remove native browser textarea resize grips (3 diagonal lines) */
+    /* Remove native browser textarea resize grips completely */
     textarea { 
       resize: none !important; 
       overflow: hidden !important; 
@@ -96,7 +96,7 @@
 
     const CATEGORIES = ['Work', 'Personal', 'Financial', 'Learning', 'Family', 'Spiritual', 'None'];
 
-    // Deep Orange for Work; subtle, elegant translucent row tinting for ADHD tracking
+    // Deep Orange for Work; soft translucent tinting for ADHD column alignment
     const CATEGORY_COLORS = {
       Work: { 
         border: 'border-l-orange-500', 
@@ -141,31 +141,50 @@
       { level: 2, label: '🚨 High', badge: 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800' }
     ];
 
+    // Practical, realistic, grounded demo examples
     const DEMO_PROJECTS = [
       {
         id: 'demo-1',
-        name: 'Q3 Strategic Roadmap',
-        briefStatus: 'Executing core milestones and cross-team alignment.',
-        category: 'Work',
+        name: 'Home Network & Private Cloud NAS',
+        briefStatus: 'Setting up local network storage server, automated backup routines, and encrypted cloud sync.',
+        category: 'Personal',
         priority: 2,
         status: 'active',
         orderIndex: 100,
         nextSteps: [
-          { id: 'd1-1', text: 'Finalize quarterly deliverables with team leads', completed: false, indent: 0 },
-          { id: 'd1-2', text: 'Publish status update on workspace', completed: true, indent: 0 }
+          { id: 'd1-1', text: 'Configured RAID storage array and user permissions', completed: true, indent: 0 },
+          { id: 'd1-2', text: 'Set up nightly encrypted offsite backup job', completed: false, indent: 0 },
+          { id: 'd1-3', text: 'Test client restore speed over local Wi-Fi', completed: false, indent: 1 }
         ],
-        notes: [{ id: 'dn1-1', text: 'Keep focus on low-friction execution.', completed: false, indent: 0 }]
+        notes: [{ id: 'dn1-1', text: 'Use static IP reservation for NAS server on router.', completed: false, indent: 0 }]
       },
       {
         id: 'demo-2',
-        name: 'Drip Irrigation Setup',
-        briefStatus: 'Planning garden bed perimeter and ordering required valves.',
-        category: 'Personal',
+        name: 'Client E-Commerce Platform Refresh',
+        briefStatus: 'Optimizing page load speeds, mobile checkout flow, and inventory management.',
+        category: 'Work',
         priority: 1,
         status: 'active',
         orderIndex: 200,
-        nextSteps: [{ id: 'd2-1', text: 'Measure perimeter and order timer valve', completed: false, indent: 0 }],
-        notes: [{ id: 'dn2-1', text: 'Pressure regulator needed at tap connection.', completed: false, indent: 0 }]
+        nextSteps: [
+          { id: 'd2-1', text: 'Migrated static assets to CDN and compressed product images', completed: true, indent: 0 },
+          { id: 'd2-2', text: 'Streamline 1-click mobile checkout interface', completed: false, indent: 0 }
+        ],
+        notes: [{ id: 'dn2-1', text: 'Audit mobile conversion rate after rollout.', completed: false, indent: 0 }]
+      },
+      {
+        id: 'demo-3',
+        name: 'Annual Investment Portfolio Rebalance',
+        briefStatus: 'Adjusting asset allocation percentages across retirement and index funds.',
+        category: 'Financial',
+        priority: 1,
+        status: 'active',
+        orderIndex: 300,
+        nextSteps: [
+          { id: 'd3-1', text: 'Calculate target index bond/equity percentages', completed: true, indent: 0 },
+          { id: 'd3-2', text: 'Execute quarterly rebalance transactions', completed: false, indent: 0 }
+        ],
+        notes: []
       }
     ];
 
@@ -183,7 +202,7 @@
       });
     };
 
-    // --- REFINED AUTO-SAVE COMPONENTS (NO RESIZE GRIPS) ---
+    // --- REFINED AUTO-SAVE COMPONENTS (AUTO-EXPANDING, ZERO CUTOFF) ---
     const AutoSaveInput = ({ value, onSave, placeholder, className, maxLength = MAX_NAME_LENGTH }) => {
       const [val, setVal] = useState(value || '');
       const timerRef = useRef(null);
@@ -230,7 +249,7 @@
       );
     };
 
-    // Clean auto-expanding textarea with zero browser resize grip lines
+    // Guaranteed zero-cutoff auto-resizing textarea
     const AutoResizeTextarea = ({ value, onSave, onKeyDown, id, placeholder, className, maxLength = MAX_NOTE_LENGTH, onFocus }) => {
       const [val, setVal] = useState(value || '');
       const textareaRef = useRef(null);
@@ -285,7 +304,7 @@
               if (timerRef.current) clearTimeout(timerRef.current);
               if (val !== value) onSave(val);
             }}
-            className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-1 leading-relaxed border-none resize-none overflow-hidden ${className}`}
+            className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-1 leading-relaxed border-none resize-none overflow-hidden break-words whitespace-pre-wrap ${className}`}
           />
         </div>
       );
@@ -542,6 +561,7 @@
           updateProjectField(project.id, field, updated);
         };
 
+        // Pressing Enter creates next checkbox & focuses it immediately
         const handleKeyDown = (e, index, currentText) => {
           if (e.key === 'Enter') {
             e.preventDefault();
@@ -617,7 +637,7 @@
                     id={`step-input-${project.id}-${field}-${idx}`}
                     value={step.text}
                     maxLength={MAX_NOTE_LENGTH}
-                    placeholder={field === 'nextSteps' ? "Add action step (Press Enter for next)..." : "Add note (Press Enter for next)..."}
+                    placeholder={field === 'nextSteps' ? "Add action step..." : "Add note..."}
                     onSave={(val) => updateStepText(idx, val)}
                     onKeyDown={(e, currentVal) => handleKeyDown(e, idx, currentVal)}
                     onFocus={() => setActiveStepId(step.id)}
@@ -668,63 +688,29 @@
       const isManualOrderingActive = sortBy === 'manual' && priorityFilter === 'all';
 
       // =========================================================================
-      // LANDING & LOGIN PAGE (UNAUTHENTICATED)
+      // LANDING & LOGIN PAGE (MATCHING IMAGE USE-CASES & PREVIEW)
       // =========================================================================
       if (!user && !isDemoMode) {
         return (
-          <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 font-sans">
-            <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+          <div className="min-h-screen bg-[#0d131f] text-slate-100 flex flex-col justify-center items-center p-4 sm:p-8 font-sans">
+            <div className="max-w-6xl w-full space-y-10">
               
-              <div className="md:col-span-7 space-y-6 text-left">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                  Executive Project Tracker
-                </div>
-
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
-                  PERSONAL PROJECT TRACKER
-                </h1>
-
-                <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-                  A modern, low-friction project tracker built for rapid execution, visual scannability, and cross-device synchronization.
-                </p>
-
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-                    <div className="text-xs font-semibold text-amber-400 uppercase">⚡ Easy Enter Keys</div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Press Enter to create next checkboxes.</p>
-                  </div>
-                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-                    <div className="text-xs font-semibold text-emerald-400 uppercase">🎨 Soft Row Tints</div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Subtle category eye tracking.</p>
-                  </div>
-                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-                    <div className="text-xs font-semibold text-blue-400 uppercase">👁️ Clean Layout</div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Auto-expanding, clear text fields.</p>
-                  </div>
-                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-                    <div className="text-xs font-semibold text-purple-400 uppercase">🧹 Hide Completed</div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Toggle completed tasks out of sight.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="md:col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 text-center">
+              {/* Header Title & CTA */}
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-4 border-b border-slate-800">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Workspace Sign In</h2>
-                  <p className="text-xs text-slate-400 mt-1">Authenticate via Google Firebase to load your workspace.</p>
+                  <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                    PERSONAL PROJECT TRACKER
+                  </h1>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Zero-friction workspace designed for execution, visual clarity, and momentum.
+                  </p>
                 </div>
-
-                {!isFirebaseConfigured ? (
-                  <div className="p-4 bg-amber-950/60 border border-amber-800 rounded-xl text-left text-xs text-amber-200">
-                    <p className="font-bold">⚠️ Configuration Notice</p>
-                    <p className="mt-1">Add your Firebase keys to enable live authentication.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
+                
+                <div className="flex flex-wrap items-center gap-3">
+                  {isFirebaseConfigured && (
                     <button 
                       onClick={handleGoogleLogin} 
-                      className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-semibold py-3 px-4 rounded-xl shadow transition text-sm"
+                      className="flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-5 rounded-xl shadow transition text-sm"
                     >
                       <svg className="w-4 h-4" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -734,24 +720,97 @@
                       </svg>
                       Sign in with Google
                     </button>
+                  )}
+                  <button 
+                    onClick={enableDemoMode} 
+                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 px-5 rounded-xl shadow transition text-sm"
+                  >
+                    🧪 Try Demo Mode
+                  </button>
+                </div>
+              </div>
 
-                    <div className="relative flex py-2 items-center">
-                      <div className="flex-grow border-t border-slate-800"></div>
-                      <span className="flex-shrink-0 mx-3 text-slate-500 text-xs font-semibold uppercase">Or Test Sandbox</span>
-                      <div className="flex-grow border-t border-slate-800"></div>
-                    </div>
+              {/* 4 CORE USE-CASE CARDS (Exact match from screenshot) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                {/* Card 1 */}
+                <div className="bg-[#131b2e] border border-slate-800 rounded-2xl p-5 space-y-2">
+                  <div className="text-2xl">✨</div>
+                  <h3 className="text-base font-bold text-white">Pure Simplistic</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Zero configuration or admin bloat. Focus purely on execution.
+                  </p>
+                </div>
 
-                    <button 
-                      onClick={enableDemoMode} 
-                      className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-slate-200 font-semibold py-2.5 px-4 rounded-xl transition text-xs"
-                    >
-                      🧪 Launch Sandbox Demo
-                    </button>
+                {/* Card 2 */}
+                <div className="bg-[#131b2e] border border-slate-800 rounded-2xl p-5 space-y-2">
+                  <div className="text-2xl">🎯</div>
+                  <h3 className="text-base font-bold text-white">Track Active Projects</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    A single high-density view for all active streams.
+                  </p>
+                </div>
+
+                {/* Card 3 */}
+                <div className="bg-[#131b2e] border border-slate-800 rounded-2xl p-5 space-y-2">
+                  <div className="text-2xl">📋</div>
+                  <h3 className="text-base font-bold text-white">Done & What's Next</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Immediate clarity on completed milestones and next steps.
+                  </p>
+                </div>
+
+                {/* Card 4 */}
+                <div className="bg-[#131b2e] border border-slate-800 rounded-2xl p-5 space-y-2">
+                  <div className="text-2xl">🔒</div>
+                  <h3 className="text-base font-bold text-white">Keep It Private</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Avoid cognitive overwhelm in an isolated secure workspace.
+                  </p>
+                </div>
+
+              </div>
+
+              {/* LIVE BOARD PREVIEW CARD (Matching attached image) */}
+              <div className="bg-[#131b2e] border border-slate-800 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+                    <span className="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                    <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                    <span className="text-xs font-mono text-slate-400 ml-2">Real Board Preview</span>
                   </div>
-                )}
+                  <span className="text-xs font-mono text-amber-400 font-semibold">Live Table View</span>
+                </div>
 
-                <div className="pt-2 text-xs text-slate-500">
-                  🔒 Private & Secure. Data scoped under your account.
+                <div className="overflow-x-auto rounded-xl border border-slate-800">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-amber-400 text-slate-950 font-black uppercase">
+                      <tr>
+                        <th className="p-3">PROJECT</th>
+                        <th className="p-3">PRIORITY</th>
+                        <th className="p-3">CATEGORY</th>
+                        <th className="p-3">STATUS BRIEF</th>
+                        <th className="p-3">NEXT STEPS</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 bg-[#0b101d] text-slate-300">
+                      <tr>
+                        <td className="p-3 font-bold text-white border-l-4 border-emerald-500">Home Network & Private NAS</td>
+                        <td className="p-3 text-rose-400 font-bold">🚨 High</td>
+                        <td className="p-3"><span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold">Personal</span></td>
+                        <td className="p-3 text-slate-300">Setting up local network storage server and encrypted cloud sync.</td>
+                        <td className="p-3 text-emerald-400">• Set up nightly encrypted offsite backup job</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-bold text-white border-l-4 border-orange-500">Client E-Commerce Platform</td>
+                        <td className="p-3 text-amber-400 font-bold">⚡ Medium</td>
+                        <td className="p-3"><span className="px-2 py-0.5 rounded bg-orange-950 text-orange-300 border border-orange-800 font-semibold">Work</span></td>
+                        <td className="p-3 text-slate-300">Optimizing page load speeds, mobile checkout flow, and inventory sync.</td>
+                        <td className="p-3 text-emerald-400">• Streamline 1-click mobile checkout interface</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -776,7 +835,7 @@
               
               {isDemoMode ? (
                 <span className="text-xs font-medium px-2.5 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800">
-                  🧪 Sandbox Demo
+                  🧪 Demo Sandbox
                 </span>
               ) : !isOnline ? (
                 <span className="text-xs font-medium px-2.5 py-0.5 rounded-full border bg-amber-500 text-slate-950 border-amber-600 animate-pulse">
@@ -815,7 +874,7 @@
               </button>
             </div>
 
-            {/* CLEAN TOOLBAR CONTROLS */}
+            {/* TOOLBAR CONTROLS */}
             <div className="flex flex-wrap items-center justify-between w-full md:w-auto gap-2">
               
               <div className="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs">
@@ -845,7 +904,7 @@
                 </select>
               </div>
 
-              {/* Hide Completed Toggle Switch */}
+              {/* Hide Completed Items Toggle */}
               <button 
                 onClick={() => setHideCompletedItems(!hideCompletedItems)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition flex items-center gap-1 ${hideCompletedItems ? 'bg-amber-500 text-slate-950 border-amber-600 font-semibold' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
@@ -900,9 +959,9 @@
             ) : (
               <div className="block md:table w-full text-left border-collapse md:min-w-[1100px]">
                 
-                {/* Modern Slate Header */}
+                {/* VIBRANT WARM AMBER HEADER (MATCHING SCREENSHOT FOR ADHD VISUAL FOCUS) */}
                 <div className="hidden md:table-header-group">
-                  <div className="md:table-row border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold uppercase tracking-wider">
+                  <div className="md:table-row bg-amber-400 text-slate-950 dark:bg-amber-500 dark:text-slate-950 text-xs font-black uppercase tracking-wider">
                     <div className="md:table-cell p-3.5 w-[22%]">Project Name</div>
                     <div className="md:table-cell p-3.5 w-[20%]">Status Brief</div>
                     <div className="md:table-cell p-3.5 w-[28%]">Next Steps</div>
@@ -930,7 +989,7 @@
                           className={`block md:table-row bg-white dark:bg-slate-900 ${colorScheme.tint} border border-slate-200 dark:border-slate-800 mb-3 md:mb-0 rounded-xl md:rounded-none overflow-hidden transition md:border-x-0 md:border-t-0 md:border-b hover:bg-slate-50/80 md:dark:hover:bg-slate-800/50`}
                         >
                           
-                          {/* 1. PROJECT NAME & QUIET NEUTRAL ACTIONS */}
+                          {/* 1. PROJECT NAME & QUIET ACTION LINKS */}
                           <div 
                             onClick={(e) => handleRowClick(e, p.id)}
                             className={`block md:table-cell p-3.5 align-top cursor-pointer md:cursor-default border-l-4 ${colorScheme.border} md:border-r ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}
@@ -954,7 +1013,7 @@
                                   className={`font-semibold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'} cursor-text`} 
                                 />
                                 
-                                {/* NEUTRAL GRAY ACTION LINKS (Does not clash with category colors) */}
+                                {/* Quiet action links in neutral gray */}
                                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400 dark:text-slate-500 font-normal">
                                   {currentView === 'active' && (
                                     <>
@@ -990,7 +1049,7 @@
                           {/* ACCORDION WRAPPER FOR MOBILE */}
                           <div className={`md:contents ${isExpanded ? 'block' : 'hidden'}`}>
                             
-                            {/* 2. BRIEF STATUS (Full Content Visible, Zero Cutoff, Zero Resize Grips) */}
+                            {/* 2. BRIEF STATUS (Guaranteed auto-expanding, zero cutoff, zero resize handles) */}
                             <div className={`block md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Status Brief</label>
                               <AutoResizeTextarea 
@@ -1016,7 +1075,7 @@
                               {renderSubList(p, 'nextSteps')}
                             </div>
 
-                            {/* 4. DETAILS (PRIORITY & CATEGORY SELECTORS) */}
+                            {/* 4. DETAILS (PRIORITY & CATEGORY) */}
                             <div className={`flex md:table-cell flex-row md:flex-col gap-2.5 p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <div className="flex-1">
                                 <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Priority</label>
