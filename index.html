@@ -1,4 +1,4 @@
-<!-- Version 2.5.0 - Zero Cutoff & Icon Priority Release -->
+<!-- Version 2.6.0 - Database Compatibility & Zero Cutoff Release -->
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -41,7 +41,7 @@
     textarea { 
       resize: none !important; 
       overflow: hidden !important; 
-      min-height: 1.5rem;
+      min-height: 1.8rem;
     }
 
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -100,56 +100,56 @@
     }
 
     // --- CONSTANTS & SCHEMAS ---
-    const MAX_NAME_LENGTH = 120;
-    const MAX_NOTE_LENGTH = 300;
+    const MAX_NAME_LENGTH = 150;
+    const MAX_NOTE_LENGTH = 400;
     const MAX_BATCH_OPERATIONS = 400;
 
     const CATEGORIES = ['Work', 'Personal', 'Financial', 'Learning', 'Family', 'Spiritual', 'None'];
 
-    // Deep Orange for Work; soft translucent row tinting restored for ADHD tracking
+    // Deep Orange for Work; soft translucent row tinting for ADHD tracking
     const CATEGORY_COLORS = {
       Work: { 
         border: 'border-l-orange-500', 
         badge: 'bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800', 
-        tint: 'bg-orange-50/40 dark:bg-orange-950/20' 
+        tint: 'bg-orange-50/20 dark:bg-orange-950/10' 
       },
       Personal: { 
         border: 'border-l-emerald-500', 
         badge: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800', 
-        tint: 'bg-emerald-50/40 dark:bg-emerald-950/20' 
+        tint: 'bg-emerald-50/20 dark:bg-emerald-950/10' 
       },
       Financial: { 
         border: 'border-l-amber-500', 
         badge: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800', 
-        tint: 'bg-amber-50/40 dark:bg-amber-950/20' 
+        tint: 'bg-amber-50/20 dark:bg-amber-950/10' 
       },
       Learning: { 
         border: 'border-l-pink-500', 
         badge: 'bg-pink-50 text-pink-800 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800', 
-        tint: 'bg-pink-50/40 dark:bg-pink-950/20' 
+        tint: 'bg-pink-50/20 dark:bg-pink-950/10' 
       },
       Family: { 
         border: 'border-l-fuchsia-500', 
         badge: 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200 dark:bg-fuchsia-950/40 dark:text-fuchsia-300 dark:border-fuchsia-800', 
-        tint: 'bg-fuchsia-50/40 dark:bg-fuchsia-950/20' 
+        tint: 'bg-fuchsia-50/20 dark:bg-fuchsia-950/10' 
       },
       Spiritual: { 
         border: 'border-l-teal-500', 
         badge: 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800', 
-        tint: 'bg-teal-50/40 dark:bg-teal-950/20' 
+        tint: 'bg-teal-50/20 dark:bg-teal-950/10' 
       },
       None: { 
         border: 'border-l-slate-400', 
         badge: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700', 
-        tint: 'bg-slate-50/20 dark:bg-slate-900/20' 
+        tint: 'bg-slate-50/10 dark:bg-slate-900/10' 
       }
     };
 
-    // Minimal Priority notation: ICON ONLY, NO BACKGROUND COLOR BOX
+    // Clean Priority notation: ICON ONLY, NO BACKGROUND COLOR BOX
     const PRIORITIES = [
-      { level: 0, icon: '', label: 'None' },
-      { level: 1, icon: '❗', label: '❗ Medium' },
-      { level: 2, icon: '‼️', label: '‼️ High' }
+      { level: 0, symbol: '', label: 'None' },
+      { level: 1, symbol: '❗', label: '❗ Medium' },
+      { level: 2, symbol: '‼️', label: '‼️ High' }
     ];
 
     // GROUNDED REAL-WORLD DEMO EXAMPLES
@@ -289,10 +289,10 @@
 
       useEffect(() => setVal(value || ''), [value]);
 
-      useEffect(() => {
+      useLayoutEffect(() => {
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
-          const newHeight = Math.max(24, textareaRef.current.scrollHeight);
+          const newHeight = Math.max(28, textareaRef.current.scrollHeight);
           textareaRef.current.style.height = `${newHeight}px`;
         }
       }, [val]);
@@ -390,6 +390,7 @@
         return () => unsubscribe();
       }, [isDemoMode]);
 
+      // DATABASE RECOVERY EFFECT: Reads ALL document variations safely without server-side orderBy blocking
       useEffect(() => {
         if (isDemoMode) {
           setLoading(false);
@@ -404,15 +405,25 @@
           setHasPendingWrites(snapshot.metadata.hasPendingWrites);
           let loaded = snapshot.docs.map(doc => {
             const data = doc.data();
+            
+            // Comprehensive schema field normalizer for legacy accounts
+            const name = data.name || data.projectName || '';
+            const briefStatus = data.briefStatus || data.statusBrief || (typeof data.status === 'string' && data.status.length > 15 ? data.status : '');
+            const category = data.category || 'None';
+            const priority = typeof data.priority === 'number' ? data.priority : 0;
+            const status = (data.status === 'paused' || data.status === 'completed' || data.status === 'active') ? data.status : 'active';
+            const archived = !!(data.archived || status === 'completed');
+            const orderIndex = typeof data.orderIndex === 'number' ? data.orderIndex : (typeof data.order === 'number' ? data.order : 0);
+
             return {
               id: doc.id,
-              name: typeof data.name === 'string' ? data.name : '',
-              briefStatus: typeof data.briefStatus === 'string' ? data.briefStatus : '',
-              category: typeof data.category === 'string' ? data.category : 'None',
-              priority: typeof data.priority === 'number' ? data.priority : 0,
-              status: typeof data.status === 'string' ? data.status : 'active',
-              archived: !!data.archived,
-              orderIndex: typeof data.orderIndex === 'number' ? data.orderIndex : (typeof data.order === 'number' ? data.order : 0),
+              name: name,
+              briefStatus: briefStatus,
+              category: category,
+              priority: priority,
+              status: status,
+              archived: archived,
+              orderIndex: orderIndex,
               nextSteps: normalizeSteps(data.nextSteps),
               notes: normalizeSteps(data.notes)
             };
@@ -547,7 +558,7 @@
         setExpandedProjectId(prev => prev === projectId ? null : projectId);
       };
 
-      // --- SUB-STEP & NOTE CHECKLIST RENDERER (WITH PURGE DONE INLINE AT BOTTOM) ---
+      // --- SUB-STEP & NOTE CHECKLIST RENDERER (REGULAR FONT WEIGHT, NO BOLD FOR NEXT STEPS) ---
       const renderSubList = (project, field) => {
         const rawItems = normalizeSteps(project[field]);
         const items = hideCompletedDone ? rawItems.filter(s => !s.completed) : rawItems;
@@ -642,6 +653,7 @@
                     className="mt-1 h-4 w-4 rounded border-slate-400 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" 
                   />
                   
+                  {/* REGULAR FONT WEIGHT FOR NEXT STEPS AND NOTES (NO HEAVY BOLD) */}
                   <AutoResizeTextarea
                     id={`step-input-${project.id}-${field}-${idx}`}
                     value={step.text}
@@ -650,7 +662,7 @@
                     onSave={(val) => updateStepText(idx, val)}
                     onKeyDown={(e, currentVal) => handleKeyDown(e, idx, currentVal)}
                     onFocus={() => setActiveStepId(step.id)}
-                    className={`text-sm py-0.5 ${step.completed ? 'line-through text-slate-400 dark:text-slate-500 opacity-60' : field === 'nextSteps' ? 'font-medium text-slate-900 dark:text-slate-100' : 'text-slate-600 dark:text-slate-400'}`}
+                    className={`text-sm font-normal py-0.5 ${step.completed ? 'line-through text-slate-400 dark:text-slate-500 opacity-60' : 'text-slate-800 dark:text-slate-200'}`}
                   />
                 </div>
 
@@ -668,7 +680,7 @@
               </div>
             ))}
             
-            {/* PURGE DONE MOVED NEXT TO + ADD ITEM */}
+            {/* PURGE DONE NEXT TO + ADD ITEM */}
             <div className="flex items-center gap-3 pt-1">
               <button onClick={addEmptyStep} className="text-xs text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 font-medium inline-flex items-center gap-1">
                 + Add Item
@@ -826,7 +838,7 @@
                       <tr>
                         <td className="p-3 font-semibold text-white border-l-4 border-emerald-500 leading-snug">Garage Cleanout & Storage Setup</td>
                         <td className="p-3 text-slate-300 bg-[#131b2e]/60 border-x border-slate-800">Cleared out left side and put up shelving.</td>
-                        <td className="p-3 font-semibold text-white">
+                        <td className="p-3 text-white">
                           <div className="text-emerald-400">• Pick up clear storage bins from hardware store</div>
                         </td>
                         <td className="p-3 text-center text-sm font-bold">‼️</td>
@@ -836,7 +848,7 @@
                       <tr>
                         <td className="p-3 font-semibold text-white border-l-4 border-amber-500 leading-snug">Annual Tax & Document Prep</td>
                         <td className="p-3 text-slate-300 bg-[#131b2e]/60 border-x border-slate-800">Gathered income slips and receipts.</td>
-                        <td className="p-3 font-semibold text-white">
+                        <td className="p-3 text-white">
                           <div className="text-amber-400">• Download property tax summaries</div>
                         </td>
                         <td className="p-3 text-center text-sm font-bold">❗</td>
@@ -854,7 +866,7 @@
       }
 
       // =========================================================================
-      // MAIN DASHBOARD WORKSPACE (ZERO CUTOFF & CATEGORY MOVED SECOND LAST)
+      // MAIN DASHBOARD WORKSPACE
       // =========================================================================
       return (
         <div className="max-w-[1440px] mx-auto p-4 sm:p-6 space-y-4">
@@ -988,11 +1000,11 @@
                 <div className="hidden md:table-header-group">
                   <div className="md:table-row bg-amber-400 text-slate-950 dark:bg-amber-500 dark:text-slate-950 text-xs font-black uppercase tracking-wider">
                     <div className="md:table-cell p-3.5 w-[20%]">Project Name</div>
-                    <div className="md:table-cell p-3.5 w-[20%]">Status Brief</div>
+                    <div className="md:table-cell p-3.5 w-[18%]">Status Brief</div>
                     <div className="md:table-cell p-3.5 w-[28%]">Next Steps</div>
                     <div className="md:table-cell p-3.5 w-[6%] text-center">Priority</div>
                     <div className="md:table-cell p-3.5 w-[10%]">Category</div>
-                    <div className="md:table-cell p-3.5 w-[16%]">Notes</div>
+                    <div className="md:table-cell p-3.5 w-[18%]">Notes</div>
                   </div>
                 </div>
 
@@ -1016,7 +1028,7 @@
                           className={`block md:table-row bg-white dark:bg-slate-900 ${colorScheme.tint} border border-slate-200 dark:border-slate-800 mb-3 md:mb-0 rounded-xl md:rounded-none overflow-hidden transition-colors duration-150 md:border-x-0 md:border-t-0 md:border-b hover:bg-slate-100/80 md:dark:hover:bg-slate-800/80 ${isArchivedRow ? 'opacity-60' : ''}`}
                         >
                           
-                          {/* 1. PROJECT NAME (GUARANTEED NO CUTOFF / WRAPS NATURALLY) */}
+                          {/* 1. PROJECT NAME (GUARANTEED ZERO CUTOFF / WRAPS NATURALLY) */}
                           <div 
                             onClick={(e) => handleRowClick(e, p.id)}
                             className={`block md:table-cell p-3.5 align-top cursor-pointer md:cursor-default border-l-4 ${colorScheme.border} md:border-r ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}
@@ -1088,7 +1100,7 @@
                               />
                             </div>
 
-                            {/* 3. ACTION ZONE: NEXT STEPS (28% COLUMN WIDTH) */}
+                            {/* 3. ACTION ZONE: NEXT STEPS (28% COLUMN WIDTH, REGULAR FONT WEIGHT) */}
                             <div className={`block md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Next Steps</label>
                               {renderSubList(p, 'nextSteps')}
@@ -1122,7 +1134,7 @@
                               </select>
                             </div>
 
-                            {/* 6. NOTES: 16% COLUMN WIDTH (AUTO-EXPANDING) */}
+                            {/* 6. NOTES: 18% COLUMN WIDTH (AUTO-EXPANDING) */}
                             <div className="block md:table-cell p-3.5 align-top border-t md:border-t-0 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
                               <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Notes</label>
                               {renderSubList(p, 'notes')}
