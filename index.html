@@ -1,4 +1,4 @@
-<!-- Version 2.11.0 - Stable Release: Priority UX & Zero Cutoff -->
+<!-- Version 3.0.0 - Fully Stabilized & Cross-Browser Safe Release -->
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -37,7 +37,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <style>
-    /* Remove native browser textarea resize grips completely */
+    /* Strictly remove native browser textarea resize grips in all browsers */
     textarea { 
       resize: none !important; 
       overflow: hidden !important; 
@@ -60,10 +60,10 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef, useLayoutEffect, Component } = React;
+    const { useState, useEffect, useRef, Component } = React;
 
     // =========================================================================
-    // FIREBASE CONFIGURATION
+    // FIREBASE CONFIGURATION (Offline Persistence removed for Chrome stability)
     // =========================================================================
     const firebaseConfig = {
       apiKey: "AIzaSyCiQU2ilhdlJkxD7-kWHl6lkO2LKQYnC7E",
@@ -86,14 +86,6 @@
         db = firebase.firestore();
         auth = firebase.auth();
         isFirebaseConfigured = true;
-
-        db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
-          if (err.code === 'failed-precondition') {
-            console.warn("Firestore persistence: Multiple tabs open.");
-          } else if (err.code === 'unimplemented') {
-            console.warn("Firestore persistence: Browser storage unsupported.");
-          }
-        });
       }
     } catch (err) {
       console.warn("Firebase initialization notice:", err);
@@ -102,7 +94,6 @@
     // --- CONSTANTS & SCHEMAS ---
     const MAX_NAME_LENGTH = 150;
     const MAX_NOTE_LENGTH = 400;
-    const MAX_BATCH_OPERATIONS = 400;
 
     const CATEGORIES = ['Work', 'Personal', 'Financial', 'Learning', 'Family', 'Spiritual', 'None'];
 
@@ -152,7 +143,7 @@
         name: 'Garage Cleanout & Storage Setup',
         briefStatus: 'Cleared out the left side and put up two heavy-duty shelving units.',
         category: 'Personal',
-        priority: 2, // High
+        priority: 2,
         status: 'active',
         archived: false,
         orderIndex: 100,
@@ -171,7 +162,7 @@
         name: 'Annual Tax & Document Prep',
         briefStatus: 'Gathered income slips and categorized digital receipts for the year.',
         category: 'Financial',
-        priority: 1, // Medium
+        priority: 1,
         status: 'active',
         archived: false,
         orderIndex: 200,
@@ -190,7 +181,7 @@
         name: 'Summer Weekend Camping Trip',
         briefStatus: 'Reserved the campsite for the third weekend of July; deposit is paid.',
         category: 'Family',
-        priority: 2, // High
+        priority: 2,
         status: 'active',
         archived: false,
         orderIndex: 300,
@@ -210,7 +201,7 @@
         name: 'Basic French Conversation',
         briefStatus: 'Finished 10 straight days of practice; working through everyday dialogue drills.',
         category: 'Learning',
-        priority: 0, // None
+        priority: 0,
         status: 'active',
         archived: false,
         orderIndex: 400,
@@ -240,7 +231,7 @@
       });
     };
 
-    // --- REFINED AUTO-EXPANDING COMPONENTS ---
+    // --- REFINED AUTO-EXPANDING COMPONENTS (SAFE USE-EFFECT) ---
     const AutoSaveInput = ({ value, onSave, placeholder, className, maxLength = MAX_NAME_LENGTH }) => {
       const [val, setVal] = useState(value || '');
       const timerRef = useRef(null);
@@ -294,17 +285,892 @@
 
       useEffect(() => setVal(value || ''), [value]);
 
-      useLayoutEffect(() => {
-        const updateHeight = () => {
-          if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            const newHeight = Math.max(22, textareaRef.current.scrollHeight);
-            textareaRef.current.style.height = `${newHeight}px`;
-          }
-        };
-        updateHeight();
-        const raf = requestAnimationFrame(updateHeight);
-        return () => cancelAnimationFrame(raf);
+      // Simple, crash-proof height adjustment
+      useEffect(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          const newHeight = Math.max(22, textareaRef.current.scrollHeight);
+          textareaRef.current.style.height = `${newHeight}px`;
+        }
       }, [val]);
 
-      const debouncedSave
+      const debouncedSave = (newValue) => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+          if (newValue !== value) onSave(newValue);
+        }, 300);
+      };
+
+      const handleChange = (e) => {
+        let text = e.target.value;
+        if (maxLength && text.length > maxLength) text = text.slice(0, maxLength);
+        setVal(text);
+        debouncedSave(text);
+      };
+
+      const handlePaste = (e) => {
+        e.preventDefault();
+        const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
+        let text = plainText;
+        if (maxLength && text.length > maxLength) text = text.slice(0, maxLength);
+        setVal(text);
+        debouncedSave(text);
+      };
+
+      return (
+        <div className="relative w-full">
+          <textarea
+            id={id}
+            ref={textareaRef}
+            rows={1}
+            value={val}
+            maxLength={maxLength}
+            placeholder={placeholder}
+            onFocus={onFocus}
+            onChange={handleChange}
+            onKeyDown={(e) => { if (onKeyDown) onKeyDown(e, val); }}
+            onPaste={handlePaste}
+            onBlur={() => {
+              if (timerRef.current) clearTimeout(timerRef.current);
+              if (val !== value) onSave(val);
+            }}
+            className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 leading-snug border-none resize-none overflow-hidden break-words whitespace-pre-wrap ${className}`}
+          />
+        </div>
+      );
+    };
+
+    // --- INTUITIVE PRIORITY BUTTON CELL (STRICT NO-WRAP) ---
+    const PriorityCell = ({ priority, onChange }) => {
+      const cyclePriority = () => {
+        onChange((priority + 1) % 3);
+      };
+
+      const renderSymbol = () => {
+        if (priority === 2) return <span className="text-lg font-black text-rose-600 dark:text-rose-400 font-mono tracking-tighter whitespace-nowrap">{"!\u00A0!"}</span>;
+        if (priority === 1) return <span className="text-lg font-black text-amber-500 dark:text-amber-400 font-mono tracking-tighter whitespace-nowrap">!</span>;
+        return <span className="text-xs text-slate-400 opacity-60 font-mono">—</span>;
+      };
+
+      return (
+        <button 
+          onClick={cyclePriority}
+          title="Click to set priority"
+          className="w-full flex items-center justify-center h-8 bg-slate-100/80 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700/60 rounded-md transition shadow-sm cursor-pointer focus:outline-none"
+        >
+          {renderSymbol()}
+        </button>
+      );
+    };
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('tracker_theme') === 'dark');
+      const [currentView, setCurrentView] = useState('active');
+      const [projects, setProjects] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [user, setUser] = useState(null);
+      
+      const [isDemoMode, setIsDemoMode] = useState(false);
+      const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+      // HIDE COMPLETED TOGGLE FOR SUB-STEPS
+      const [hideCompletedDone, setHideCompletedDone] = useState(false);
+      const [priorityFilter, setPriorityFilter] = useState('all');
+      const [sortBy, setSortBy] = useState('manual');
+
+      // Mobile UI States
+      const [expandedProjectId, setExpandedProjectId] = useState(null);
+      const [activeStepId, setActiveStepId] = useState(null);
+
+      useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+        };
+      }, []);
+
+      useEffect(() => {
+        if (!isFirebaseConfigured || !auth) {
+          setLoading(false);
+          return;
+        }
+        const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+          setUser(currentUser);
+          if (!currentUser && !isDemoMode) {
+            setProjects([]);
+            setLoading(false);
+          }
+        });
+        return () => unsubscribe();
+      }, [isDemoMode]);
+
+      // DATABASE RECOVERY EFFECT
+      useEffect(() => {
+        if (isDemoMode) {
+          setLoading(false);
+          return;
+        }
+
+        if (!user || !db) return;
+        setLoading(true);
+        
+        const userProjectsRef = db.collection('users').doc(user.uid).collection('projects');
+        const unsubscribe = userProjectsRef.onSnapshot((snapshot) => {
+          let loaded = snapshot.docs.map(doc => {
+            const data = doc.data();
+            
+            const name = data.name || data.projectName || '';
+            const briefStatus = data.briefStatus || data.statusBrief || (typeof data.status === 'string' && data.status.length > 15 ? data.status : '');
+            const category = data.category || 'None';
+            const priority = typeof data.priority === 'number' ? data.priority : 0;
+            const status = (data.status === 'paused' || data.status === 'completed' || data.status === 'active') ? data.status : 'active';
+            const archived = !!(data.archived || status === 'completed');
+            const orderIndex = typeof data.orderIndex === 'number' ? data.orderIndex : (typeof data.order === 'number' ? data.order : 0);
+
+            return {
+              id: doc.id,
+              name: name,
+              briefStatus: briefStatus,
+              category: category,
+              priority: priority,
+              status: status,
+              archived: archived,
+              orderIndex: orderIndex,
+              nextSteps: normalizeSteps(data.nextSteps),
+              notes: normalizeSteps(data.notes)
+            };
+          });
+
+          setProjects(loaded);
+          setLoading(false);
+        }, (err) => {
+          console.error("Firestore sync error:", err);
+          setLoading(false);
+        });
+
+        return () => unsubscribe();
+      }, [user, isDemoMode]);
+
+      useEffect(() => {
+        localStorage.setItem('tracker_theme', isDarkMode ? 'dark' : 'light');
+        if (isDarkMode) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      }, [isDarkMode]);
+
+      const handleGoogleLogin = async () => {
+        try {
+          const provider = new firebase.auth.GoogleAuthProvider();
+          await auth.signInWithPopup(provider);
+          setIsDemoMode(false);
+        } catch (err) {
+          alert("Sign in failed: " + err.message);
+        }
+      };
+
+      const handleLogout = () => {
+        if (confirm("Sign out of your workspace?")) {
+          auth.signOut();
+          setIsDemoMode(false);
+        }
+      };
+
+      const enableDemoMode = () => {
+        setIsDemoMode(true);
+        setProjects(DEMO_PROJECTS);
+      };
+
+      const updateProjectField = (id, field, value) => {
+        if (isDemoMode) {
+          setProjects(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+          return;
+        }
+        if (!user || !db) return;
+        db.collection('users').doc(user.uid).collection('projects').doc(id).update({ [field]: value });
+      };
+
+      const addProject = () => {
+        const maxOrder = projects.length > 0 ? Math.max(...projects.map(p => p.orderIndex || 0)) : 0;
+        const newProj = {
+          name: 'New Project',
+          briefStatus: '',
+          category: 'None',
+          priority: 0,
+          status: 'active',
+          archived: false,
+          orderIndex: maxOrder + 100,
+          nextSteps: [{ id: `step-${Date.now()}`, text: '', completed: false, indent: 0 }],
+          notes: []
+        };
+
+        if (isDemoMode) {
+          setProjects([...projects, { id: `demo-${Date.now()}`, ...newProj }]);
+          return;
+        }
+        if (!user || !db) return;
+        db.collection('users').doc(user.uid).collection('projects').add(newProj);
+      };
+
+      const setProjectStatus = (id, newStatus) => {
+        if (isDemoMode) {
+          setProjects(prev => prev.map(p => p.id === id ? { ...p, status: newStatus, archived: newStatus === 'completed' } : p));
+          return;
+        }
+        if (!user || !db) return;
+        db.collection('users').doc(user.uid).collection('projects').doc(id).update({ 
+          status: newStatus, 
+          archived: newStatus === 'completed' 
+        });
+      };
+
+      const deleteProject = (id) => {
+        if (!confirm('Permanently delete this project?')) return;
+        if (isDemoMode) {
+          setProjects(prev => prev.filter(p => p.id !== id));
+          return;
+        }
+        if (!user || !db) return;
+        db.collection('users').doc(user.uid).collection('projects').doc(id).delete();
+      };
+
+      const moveProject = (indexInView, direction) => {
+        const viewProjects = displayedProjects;
+        const targetViewIndex = direction === 'up' ? indexInView - 1 : indexInView + 1;
+        if (targetViewIndex < 0 || targetViewIndex >= viewProjects.length) return;
+
+        const p1 = viewProjects[indexInView];
+        const p2 = viewProjects[targetViewIndex];
+        const tempIndex = p1.orderIndex || 0;
+        const targetIndex = p2.orderIndex || 0;
+
+        if (isDemoMode) {
+          setProjects(prev => prev.map(p => {
+            if (p.id === p1.id) return { ...p, orderIndex: targetIndex };
+            if (p.id === p2.id) return { ...p, orderIndex: tempIndex };
+            return p;
+          }));
+          return;
+        }
+
+        if (!user || !db) return;
+        const batch = db.batch();
+        batch.update(db.collection('users').doc(user.uid).collection('projects').doc(p1.id), { orderIndex: targetIndex });
+        batch.update(db.collection('users').doc(user.uid).collection('projects').doc(p2.id), { orderIndex: tempIndex });
+        batch.commit();
+      };
+
+      const purgeProjectSubSteps = (projectId, field) => {
+        const proj = projects.find(p => p.id === projectId);
+        if (!proj) return;
+        const remaining = (proj[field] || []).filter(s => !s.completed);
+        updateProjectField(projectId, field, remaining);
+      };
+
+      const handleRowClick = (e, projectId) => {
+        if (['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+        setExpandedProjectId(prev => prev === projectId ? null : projectId);
+      };
+
+      // --- SUB-STEP & NOTE CHECKLIST RENDERER (TIGHT VERTICAL LINE-HEIGHT) ---
+      const renderSubList = (project, field) => {
+        const rawItems = normalizeSteps(project[field]);
+        const items = hideCompletedDone ? rawItems.filter(s => !s.completed) : rawItems;
+
+        const moveStep = (index, direction) => {
+          const targetIdx = direction === 'up' ? index - 1 : index + 1;
+          if (targetIdx < 0 || targetIdx >= rawItems.length) return;
+          const updated = [...rawItems];
+          const temp = updated[index];
+          updated[index] = updated[targetIdx];
+          updated[targetIdx] = temp;
+          updateProjectField(project.id, field, updated);
+        };
+
+        const updateIndent = (index, direction) => {
+          const updated = [...rawItems];
+          const currentIndent = updated[index].indent || 0;
+          updated[index].indent = direction === 'left' ? Math.max(0, currentIndent - 1) : Math.min(2, currentIndent + 1);
+          updateProjectField(project.id, field, updated);
+        };
+
+        const handleKeyDown = (e, index, currentText) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const updated = [...rawItems];
+            updated[index].text = currentText.slice(0, MAX_NOTE_LENGTH);
+            const newStep = { 
+              id: `step-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`, 
+              text: '', 
+              completed: false, 
+              indent: rawItems[index] ? rawItems[index].indent : 0 
+            };
+            updated.splice(index + 1, 0, newStep);
+            updateProjectField(project.id, field, updated);
+            
+            setTimeout(() => {
+              const nextInput = document.getElementById(`step-input-${project.id}-${field}-${index + 1}`);
+              if (nextInput) nextInput.focus();
+            }, 30);
+          } else if (e.key === 'Tab') {
+            e.preventDefault();
+            updateIndent(index, e.shiftKey ? 'left' : 'right');
+          } else if (e.key === 'Backspace' && currentText === '' && rawItems.length > 1) {
+            e.preventDefault();
+            const updated = rawItems.filter((_, i) => i !== index);
+            updateProjectField(project.id, field, updated);
+            setTimeout(() => {
+              const prevInput = document.getElementById(`step-input-${project.id}-${field}-${Math.max(0, index - 1)}`);
+              if (prevInput) prevInput.focus();
+            }, 30);
+          }
+        };
+
+        const updateStepText = (index, val) => {
+          const updated = [...rawItems];
+          updated[index].text = val.slice(0, MAX_NOTE_LENGTH);
+          updateProjectField(project.id, field, updated);
+        };
+
+        const toggleStepComplete = (index) => {
+          const updated = [...rawItems];
+          updated[index].completed = !updated[index].completed;
+          updateProjectField(project.id, field, updated);
+        };
+
+        const addEmptyStep = () => {
+          updateProjectField(project.id, field, [...rawItems, { id: `step-${Date.now()}`, text: '', completed: false, indent: 0 }]);
+        };
+
+        const indentStyles = [
+          'ml-0', 
+          'ml-4 border-l-2 border-slate-300 dark:border-slate-700 pl-2', 
+          'ml-8 border-l-2 border-amber-400 pl-2'
+        ];
+
+        const completedCountInField = rawItems.filter(s => s.completed).length;
+
+        return (
+          <div className="space-y-0.5">
+            {items.map((step, idx) => (
+              <div key={step.id || idx} className={`group/step flex flex-col transition-all ${indentStyles[step.indent || 0]}`}>
+                <div className="flex items-start gap-1.5">
+                  <div className="hidden md:flex flex-col text-[10px] text-slate-400 opacity-20 group-hover/step:opacity-100 transition pt-0.5">
+                    <button onClick={() => moveStep(idx, 'up')} disabled={idx === 0} className="hover:text-amber-600 leading-none disabled:opacity-10">▲</button>
+                    <button onClick={() => moveStep(idx, 'down')} disabled={idx === rawItems.length - 1} className="hover:text-amber-600 leading-none disabled:opacity-10">▼</button>
+                  </div>
+
+                  <input 
+                    type="checkbox" 
+                    checked={!!step.completed} 
+                    onChange={() => toggleStepComplete(idx)} 
+                    className="mt-0.5 h-4 w-4 rounded border-slate-400 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" 
+                  />
+                  
+                  {/* REGULAR FONT WEIGHT WITH COMPACT LINE HEIGHT (~1.15) */}
+                  <AutoResizeTextarea
+                    id={`step-input-${project.id}-${field}-${idx}`}
+                    value={step.text}
+                    maxLength={MAX_NOTE_LENGTH}
+                    placeholder={field === 'nextSteps' ? "Add action step..." : "Add note..."}
+                    onSave={(val) => updateStepText(idx, val)}
+                    onKeyDown={(e, currentVal) => handleKeyDown(e, idx, currentVal)}
+                    onFocus={() => setActiveStepId(step.id)}
+                    className={`text-sm font-normal py-0.5 leading-snug ${step.completed ? 'line-through text-slate-400 dark:text-slate-500 opacity-60' : 'text-slate-800 dark:text-slate-200'}`}
+                  />
+                </div>
+
+                {/* Mobile Formatting Ribbon */}
+                {activeStepId === step.id && (
+                  <div className="md:hidden flex items-center justify-start gap-2 mt-1 mb-2 ml-6">
+                    <div className="flex bg-slate-200 dark:bg-slate-800 rounded-lg overflow-hidden text-xs">
+                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'up'); }} disabled={idx === 0} className="px-2.5 py-1 text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-slate-700">▲ Up</button>
+                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'down'); }} disabled={idx === rawItems.length - 1} className="px-2.5 py-1 text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-slate-700">▼ Down</button>
+                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'left'); }} disabled={(step.indent || 0) === 0} className="px-2.5 py-1 text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-slate-700">⇥ Outdent</button>
+                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'right'); }} disabled={(step.indent || 0) === 2} className="px-2.5 py-1 text-slate-700 dark:text-slate-300">Indent ⇤</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            
+            <div className="flex items-center gap-2.5 pt-0.5">
+              <button onClick={addEmptyStep} className="text-xs text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 font-medium inline-flex items-center gap-1">
+                + Add Item
+              </button>
+              
+              {completedCountInField > 0 && (
+                <>
+                  <span className="text-slate-300 dark:text-slate-700">•</span>
+                  <button 
+                    onClick={() => purgeProjectSubSteps(project.id, field)} 
+                    className="text-xs text-slate-400 hover:text-red-500 transition font-normal"
+                  >
+                    Purge Done ({completedCountInField})
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      // Filter and Sort Projects
+      const masterViewProjects = projects.filter(p => {
+        if (currentView === 'active') return p.status === 'active';
+        if (currentView === 'paused') return p.status === 'paused';
+        if (currentView === 'completed') return p.status === 'completed' || p.archived;
+        return true;
+      });
+
+      const filteredProjects = masterViewProjects.filter(p => {
+        if (priorityFilter !== 'all') {
+          return p.priority === parseInt(priorityFilter, 10);
+        }
+        return true;
+      });
+
+      const displayedProjects = [...filteredProjects].sort((a, b) => {
+        if (sortBy === 'priority-desc') return b.priority - a.priority;
+        if (sortBy === 'priority-asc') return a.priority - b.priority;
+        return (a.orderIndex || 0) - (b.orderIndex || 0);
+      });
+
+      const activeCount = projects.filter(p => p.status === 'active' && !p.archived).length;
+      const pausedCount = projects.filter(p => p.status === 'paused').length;
+      const completedCount = projects.filter(p => p.status === 'completed' || p.archived).length;
+
+      const isManualOrderingActive = sortBy === 'manual' && priorityFilter === 'all';
+
+      // =========================================================================
+      // LANDING & LOGIN PAGE
+      // =========================================================================
+      if (!user && !isDemoMode) {
+        return (
+          <div className="min-h-screen bg-[#0d131f] text-slate-100 flex flex-col justify-center items-center p-4 sm:p-8 font-sans">
+            <div className="max-w-6xl w-full space-y-10">
+              
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-4 border-b border-slate-800">
+                <div>
+                  <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                    PERSONAL PROJECT TRACKER
+                  </h1>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Zero-friction workspace designed for execution, visual clarity, and momentum.
+                  </p>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-3">
+                  {isFirebaseConfigured && (
+                    <button 
+                      onClick={handleGoogleLogin} 
+                      className="flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-5 rounded-xl shadow transition text-sm"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      </svg>
+                      Sign in with Google
+                    </button>
+                  )}
+                  <button 
+                    onClick={enableDemoMode} 
+                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 px-5 rounded-xl shadow transition text-sm"
+                  >
+                    Demo
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-[#131b2e] border border-slate-800 rounded-2xl p-5 space-y-2">
+                  <div className="text-2xl">✨</div>
+                  <h3 className="text-base font-bold text-white">Pure Simplistic</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">Zero configuration or admin bloat. Focus purely on execution.</p>
+                </div>
+                <div className="bg-[#131b2e] border border-slate-800 rounded-2xl p-5 space-y-2">
+                  <div className="text-2xl">🎯</div>
+                  <h3 className="text-base font-bold text-white">Track Active Projects</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">A single high-density view for all active streams.</p>
+                </div>
+                <div className="bg-[#131b2e] border border-slate-800 rounded-2xl p-5 space-y-2">
+                  <div className="text-2xl">📋</div>
+                  <h3 className="text-base font-bold text-white">Done & What's Next</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">Immediate clarity on completed milestones and next steps.</p>
+                </div>
+                <div className="bg-[#131b2e] border border-slate-800 rounded-2xl p-5 space-y-2">
+                  <div className="text-2xl">🔒</div>
+                  <h3 className="text-base font-bold text-white">Keep It Private</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">Avoid cognitive overwhelm in an isolated secure workspace.</p>
+                </div>
+              </div>
+
+              {/* LIVE BOARD PREVIEW CARD */}
+              <div className="bg-[#131b2e] border border-slate-800 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+                    <span className="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                    <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                    <span className="text-xs font-mono text-slate-400 ml-2">Real Board Preview</span>
+                  </div>
+                  <span className="text-xs font-mono text-amber-400 font-semibold">Live Workspace Schema</span>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-800">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-amber-400 text-slate-950 font-black uppercase tracking-wider">
+                      <tr>
+                        <th className="p-3 w-[18%]">PROJECT NAME</th>
+                        <th className="p-3 w-[18%]">STATUS BRIEF</th>
+                        <th className="p-3 w-[27%]">NEXT STEPS</th>
+                        <th className="p-3 w-[5%] text-center">PRIORITY</th>
+                        <th className="p-3 w-[8%]">CATEGORY</th>
+                        <th className="p-3 w-[24%]">NOTES</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 bg-[#0b101d] text-slate-300">
+                      <tr>
+                        <td className="p-3 font-semibold text-white border-l-4 border-emerald-500 leading-snug">Garage Cleanout & Storage Setup</td>
+                        <td className="p-3 text-slate-300 bg-[#131b2e]/60 border-x border-slate-800">Cleared out left side and put up shelving.</td>
+                        <td className="p-3 text-slate-200">
+                          <div>• Pick up clear storage bins from hardware store</div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <button className="text-rose-400 font-mono font-black text-lg tracking-tighter whitespace-nowrap bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700 w-full">!&nbsp;!</button>
+                        </td>
+                        <td className="p-3"><span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold w-full block text-center">Personal</span></td>
+                        <td className="p-3 text-slate-400">Max bin height is 18 inches.</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-semibold text-white border-l-4 border-amber-500 leading-snug">Annual Tax & Document Prep</td>
+                        <td className="p-3 text-slate-300 bg-[#131b2e]/60 border-x border-slate-800">Gathered income slips and receipts.</td>
+                        <td className="p-3 text-slate-200">
+                          <div>• Download property tax summaries</div>
+                        </td>
+                        <td className="p-3 text-center">
+                           <button className="text-amber-400 font-mono font-black text-lg tracking-tighter whitespace-nowrap bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700 w-full">!</button>
+                        </td>
+                        <td className="p-3"><span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-semibold w-full block text-center">Financial</span></td>
+                        <td className="p-3 text-slate-400">Portal file limit 25 MB.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        );
+      }
+
+      // =========================================================================
+      // MAIN DASHBOARD WORKSPACE
+      // =========================================================================
+      return (
+        <div className="max-w-[1440px] mx-auto p-4 sm:p-6 space-y-4">
+          
+          {/* HEADER BAR */}
+          <header className="flex flex-col md:flex-row flex-wrap justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            
+            <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+              <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+                PERSONAL PROJECT TRACKER
+              </h1>
+              
+              {isDemoMode ? (
+                <span className="text-xs font-medium px-2.5 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800">
+                  🧪 Demo
+                </span>
+              ) : !isOnline ? (
+                <span className="text-xs font-medium px-2.5 py-0.5 rounded-full border bg-amber-500 text-slate-950 border-amber-600 animate-pulse">
+                  📡 Offline
+                </span>
+              ) : hasPendingWrites ? (
+                <span className="text-xs font-medium px-2.5 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-200">
+                  🔄 Syncing...
+                </span>
+              ) : (
+                <span className="text-xs font-medium px-2.5 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800">
+                  ☁️ Synced
+                </span>
+              )}
+            </div>
+
+            {/* GLOBAL VIEW SWITCHER TABS */}
+            <div className="flex items-center w-full md:w-auto bg-slate-100 dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0">
+              <button 
+                onClick={() => setCurrentView('active')} 
+                className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-md text-xs font-semibold transition flex justify-center items-center gap-1.5 ${currentView === 'active' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
+              >
+                Active <span className="text-[11px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{activeCount}</span>
+              </button>
+              <button 
+                onClick={() => setCurrentView('paused')} 
+                className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-md text-xs font-semibold transition flex justify-center items-center gap-1.5 ${currentView === 'paused' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
+              >
+                Paused <span className="text-[11px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{pausedCount}</span>
+              </button>
+              <button 
+                onClick={() => setCurrentView('completed')} 
+                className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-md text-xs font-semibold transition flex justify-center items-center gap-1.5 ${currentView === 'completed' ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
+              >
+                Completed <span className="text-[11px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{completedCount}</span>
+              </button>
+            </div>
+
+            {/* TOOLBAR CONTROLS & HIDE DONE TOGGLE */}
+            <div className="flex flex-wrap items-center justify-between w-full md:w-auto gap-2">
+              
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs">
+                <span className="text-slate-500 dark:text-slate-400 mr-1.5 font-medium">Filter:</span>
+                <select 
+                  value={priorityFilter} 
+                  onChange={(e) => setPriorityFilter(e.target.value)} 
+                  className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer"
+                >
+                  <option value="all">All Priorities</option>
+                  <option value="2">! ! High Priority</option>
+                  <option value="1">! Medium Priority</option>
+                  <option value="0">Normal</option>
+                </select>
+              </div>
+
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs">
+                <span className="text-slate-500 dark:text-slate-400 mr-1.5 font-medium">Sort:</span>
+                <select 
+                  value={sortBy} 
+                  onChange={(e) => setSortBy(e.target.value)} 
+                  className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer"
+                >
+                  <option value="manual">Manual Order</option>
+                  <option value="priority-desc">Priority: High → Low</option>
+                  <option value="priority-asc">Priority: Low → High</option>
+                </select>
+              </div>
+
+              {/* HIDE DONE SUB-STEPS TOGGLE SWITCH */}
+              <button 
+                onClick={() => setHideCompletedDone(!hideCompletedDone)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold border transition flex items-center gap-1 ${hideCompletedDone ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-sm' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
+              >
+                {hideCompletedDone ? '👁️ Show Done' : '👁️ Hide Done'}
+              </button>
+
+              <button 
+                onClick={() => setIsDarkMode(!isDarkMode)} 
+                className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium"
+              >
+                {isDarkMode ? '☀️ Light' : '🌙 Dark'}
+              </button>
+
+              <button 
+                onClick={addProject} 
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-3.5 py-1 rounded-lg text-xs shadow-sm transition"
+              >
+                + New Project
+              </button>
+
+              {(user || isDemoMode) && (
+                <div className="flex items-center gap-2 ml-auto md:ml-0">
+                  {user?.photoURL ? (
+                    <img src={user.photoURL} className="w-7 h-7 rounded-full border border-slate-200 dark:border-slate-700" alt="Avatar" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-semibold text-slate-600 dark:text-slate-300">
+                      {isDemoMode ? 'D' : '?'}
+                    </div>
+                  )}
+                  <button onClick={handleLogout} className="text-xs text-slate-400 hover:text-red-500 font-medium transition hidden md:block">
+                    {isDemoMode ? 'Exit Demo' : 'Sign Out'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </header>
+
+          {/* STREAMLINED TABLE CONTAINER */}
+          <div className="md:bg-white md:dark:bg-slate-900 md:rounded-xl md:border md:border-slate-200 md:dark:border-slate-800 md:shadow-sm overflow-x-hidden md:overflow-x-auto">
+            {loading ? (
+              <div className="p-12 text-center text-xs font-mono text-slate-400 bg-white dark:bg-slate-900 rounded-xl">Loading workspace...</div>
+            ) : (
+              <div className="block md:table w-full text-left border-collapse md:min-w-[1100px]">
+                
+                {/* VIBRANT WARM AMBER HEADER */}
+                <div className="hidden md:table-header-group">
+                  <div className="md:table-row bg-amber-400 text-slate-950 dark:bg-amber-500 dark:text-slate-950 text-xs font-black uppercase tracking-wider">
+                    <div className="md:table-cell p-3.5 w-[18%]">Project Name</div>
+                    <div className="md:table-cell p-3.5 w-[18%]">Status Brief</div>
+                    <div className="md:table-cell p-3.5 w-[27%]">Next Steps</div>
+                    <div className="md:table-cell p-3.5 w-[5%] text-center">Priority</div>
+                    <div className="md:table-cell p-3.5 w-[8%]">Category</div>
+                    <div className="md:table-cell p-3.5 w-[24%]">Notes</div>
+                  </div>
+                </div>
+
+                <div className="block md:table-row-group">
+                  {displayedProjects.length === 0 ? (
+                    <div className="block md:table-row bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <div className="md:table-cell p-12 text-center text-slate-400 text-sm">
+                        No projects found in <strong>{currentView}</strong> view. Click "+ New Project" to get started.
+                      </div>
+                    </div>
+                  ) : (
+                    displayedProjects.map((p, index) => {
+                      const colorScheme = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
+                      const isExpanded = expandedProjectId === p.id;
+                      const isArchivedRow = p.archived || p.status === 'completed';
+
+                      return (
+                        <div 
+                          key={p.id} 
+                          className={`block md:table-row bg-white dark:bg-slate-900 ${colorScheme.tint} border border-slate-200 dark:border-slate-800 mb-3 md:mb-0 rounded-xl md:rounded-none overflow-hidden transition-colors duration-150 md:border-x-0 md:border-t-0 md:border-b hover:bg-slate-100/80 md:dark:hover:bg-slate-800/80 ${isArchivedRow ? 'opacity-60' : ''}`}
+                        >
+                          
+                          {/* 1. PROJECT NAME (GUARANTEED NO CUTOFF / WRAPS NATURALLY) */}
+                          <div 
+                            onClick={(e) => handleRowClick(e, p.id)}
+                            className={`block md:table-cell p-3.5 align-top cursor-pointer md:cursor-default border-l-4 ${colorScheme.border} md:border-r ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              
+                              {/* Reorder Arrows */}
+                              {isManualOrderingActive && (
+                                <div className="hidden md:flex flex-col text-xs text-slate-400 pt-0.5 opacity-40 hover:opacity-100 transition">
+                                  <button onClick={() => moveProject(index, 'up')} disabled={index === 0} className="hover:text-amber-600 leading-none p-0.5 disabled:opacity-10" title="Move Up">▲</button>
+                                  <button onClick={() => moveProject(index, 'down')} disabled={index === displayedProjects.length - 1} className="hover:text-amber-600 leading-none p-0.5 disabled:opacity-10" title="Move Down">▼</button>
+                                </div>
+                              )}
+
+                              <div className="flex-1 min-w-0 break-words">
+                                <AutoResizeTextarea 
+                                  value={p.name} 
+                                  maxLength={MAX_NAME_LENGTH}
+                                  placeholder="Project Name..." 
+                                  onSave={(v) => updateProjectField(p.id, 'name', v)} 
+                                  className={`font-semibold text-base leading-snug ${isDarkMode ? 'text-white' : 'text-slate-900'} cursor-text break-words whitespace-pre-wrap`} 
+                                />
+                                
+                                {/* Quiet action links in neutral gray */}
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400 dark:text-slate-500 font-normal">
+                                  {currentView === 'active' && (
+                                    <>
+                                      <button onClick={() => setProjectStatus(p.id, 'paused')} className="hover:text-slate-700 dark:hover:text-slate-300 transition">Pause</button>
+                                      <span>•</span>
+                                      <button onClick={() => setProjectStatus(p.id, 'completed')} className="hover:text-slate-700 dark:hover:text-slate-300 transition">Complete</button>
+                                    </>
+                                  )}
+                                  {currentView === 'paused' && (
+                                    <>
+                                      <button onClick={() => setProjectStatus(p.id, 'active')} className="hover:text-slate-700 dark:hover:text-slate-300 transition">Resume</button>
+                                      <span>•</span>
+                                      <button onClick={() => setProjectStatus(p.id, 'completed')} className="hover:text-slate-700 dark:hover:text-slate-300 transition">Complete</button>
+                                    </>
+                                  )}
+                                  {currentView === 'completed' && (
+                                    <button onClick={() => setProjectStatus(p.id, 'active')} className="hover:text-slate-700 dark:hover:text-slate-300 transition">Reactivate</button>
+                                  )}
+                                  <span>•</span>
+                                  <button onClick={() => deleteProject(p.id)} className="hover:text-red-500 transition">Delete</button>
+                                </div>
+                              </div>
+                              
+                              {/* Mobile Chevron */}
+                              <div className="md:hidden pt-1 text-slate-400">
+                                <svg className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* ACCORDION WRAPPER FOR MOBILE */}
+                          <div className={`md:contents ${isExpanded ? 'block' : 'hidden'}`}>
+                            
+                            {/* 2. CONTEXT ANCHOR: STATUS BRIEF */}
+                            <div className={`block md:table-cell p-3.5 align-top bg-slate-100/50 dark:bg-slate-800/40 border-t md:border-t-0 md:border-r border-slate-200/80 dark:border-slate-800`}>
+                              <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Status Brief</label>
+                              <AutoResizeTextarea 
+                                value={p.briefStatus || ''} 
+                                maxLength={MAX_NOTE_LENGTH}
+                                placeholder="Status brief..." 
+                                onSave={(v) => updateProjectField(p.id, 'briefStatus', v)} 
+                                className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`} 
+                              />
+                            </div>
+
+                            {/* 3. ACTION ZONE: NEXT STEPS */}
+                            <div className={`block md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
+                              <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Next Steps</label>
+                              {renderSubList(p, 'nextSteps')}
+                            </div>
+
+                            {/* 4. DEDICATED PRIORITY BUTTON */}
+                            <div className={`block md:table-cell p-3.5 align-top text-center border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
+                              <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Priority</label>
+                              <PriorityCell 
+                                priority={p.priority} 
+                                onChange={(newPriority) => updateProjectField(p.id, 'priority', newPriority)} 
+                              />
+                            </div>
+
+                            {/* 5. DEDICATED CATEGORY COLUMN */}
+                            <div className={`block md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
+                              <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Category</label>
+                              <select 
+                                value={p.category || 'None'} 
+                                onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
+                                className={`text-xs p-1 rounded font-semibold border cursor-pointer transition w-full ${colorScheme.badge}`}
+                              >
+                                {CATEGORIES.map(c => <option key={c} value={c} className="bg-white text-slate-800 font-normal">{c}</option>)}
+                              </select>
+                            </div>
+
+                            {/* 6. NOTES */}
+                            <div className="block md:table-cell p-3.5 align-top border-t md:border-t-0 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                              <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Notes</label>
+                              {renderSubList(p, 'notes')}
+                            </div>
+
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // --- ERROR BOUNDARY ---
+    class ErrorBoundary extends Component {
+      constructor(props) { super(props); this.state = { hasError: false }; }
+      static getDerivedStateFromError() { return { hasError: true }; }
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="p-8 text-center max-w-md mx-auto my-12 bg-white dark:bg-slate-900 border rounded-xl shadow-xl">
+              <h2 className="text-base font-bold text-red-600 mb-2">Workspace Render Error</h2>
+              <p className="text-xs text-slate-500 mb-4">A component state error occurred. Reloading will reset your view layout.</p>
+              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-amber-500 text-slate-950 font-semibold rounded-lg text-xs">
+                Reload Workspace
+              </button>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<ErrorBoundary><App /></ErrorBoundary>);
+  </script>
+</body>
+</html>
