@@ -1,4 +1,4 @@
-<!-- Version 2.7.0 - RCA Zero Cutoff & Icon-Only Priority Release -->
+<!-- Version 2.8.0 - Auto-Expanding Titles & Compact ADHD Focus Release -->
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -106,44 +106,51 @@
 
     const CATEGORIES = ['Work', 'Personal', 'Financial', 'Learning', 'Family', 'Spiritual', 'None'];
 
-    // Deep Orange for Work; soft translucent row tinting restored for ADHD tracking
+    // Deep Orange for Work; soft translucent row tinting for ADHD visual tracking
     const CATEGORY_COLORS = {
       Work: { 
         border: 'border-l-orange-500', 
         badge: 'bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800', 
-        tint: 'bg-orange-50/20 dark:bg-orange-950/10' 
+        tint: 'bg-orange-50/30 dark:bg-orange-950/20' 
       },
       Personal: { 
         border: 'border-l-emerald-500', 
         badge: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800', 
-        tint: 'bg-emerald-50/20 dark:bg-emerald-950/10' 
+        tint: 'bg-emerald-50/30 dark:bg-emerald-950/20' 
       },
       Financial: { 
         border: 'border-l-amber-500', 
         badge: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800', 
-        tint: 'bg-amber-50/20 dark:bg-amber-950/10' 
+        tint: 'bg-amber-50/30 dark:bg-amber-950/20' 
       },
       Learning: { 
         border: 'border-l-pink-500', 
         badge: 'bg-pink-50 text-pink-800 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800', 
-        tint: 'bg-pink-50/20 dark:bg-pink-950/10' 
+        tint: 'bg-pink-50/30 dark:bg-pink-950/20' 
       },
       Family: { 
         border: 'border-l-fuchsia-500', 
         badge: 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200 dark:bg-fuchsia-950/40 dark:text-fuchsia-300 dark:border-fuchsia-800', 
-        tint: 'bg-fuchsia-50/20 dark:bg-fuchsia-950/10' 
+        tint: 'bg-fuchsia-50/30 dark:bg-fuchsia-950/20' 
       },
       Spiritual: { 
         border: 'border-l-teal-500', 
         badge: 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800', 
-        tint: 'bg-teal-50/20 dark:bg-teal-950/10' 
+        tint: 'bg-teal-50/30 dark:bg-teal-950/20' 
       },
       None: { 
         border: 'border-l-slate-400', 
         badge: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700', 
-        tint: 'bg-slate-50/10 dark:bg-slate-900/10' 
+        tint: 'bg-slate-50/15 dark:bg-slate-900/15' 
       }
     };
+
+    // Clean Priority notation: Icon only (! ! for High, ! for Medium, blank for None)
+    const PRIORITIES = [
+      { level: 0, symbol: '', label: 'None' },
+      { level: 1, symbol: '!', label: '! Medium' },
+      { level: 2, symbol: '! !', label: '! ! High' }
+    ];
 
     // GROUNDED REAL-WORLD DEMO EXAMPLES
     const DEMO_PROJECTS = [
@@ -152,7 +159,7 @@
         name: 'Garage Cleanout & Storage Setup',
         briefStatus: 'Cleared out the left side and put up two heavy-duty shelving units.',
         category: 'Personal',
-        priority: 2, // High (‼️)
+        priority: 2, // High (! !)
         status: 'active',
         archived: false,
         orderIndex: 100,
@@ -168,7 +175,7 @@
         name: 'Annual Tax & Document Prep',
         briefStatus: 'Gathered income slips and categorized digital receipts for the year.',
         category: 'Financial',
-        priority: 1, // Medium (❗)
+        priority: 1, // Medium (!)
         status: 'active',
         archived: false,
         orderIndex: 200,
@@ -184,7 +191,7 @@
         name: 'Summer Weekend Camping Trip',
         briefStatus: 'Reserved the campsite for the third weekend of July; deposit is paid.',
         category: 'Family',
-        priority: 2, // High (‼️)
+        priority: 2, // High (! !)
         status: 'active',
         archived: false,
         orderIndex: 300,
@@ -227,54 +234,7 @@
       });
     };
 
-    // --- REFINED INPUT COMPONENTS WITH TWO-PASS REFOW FOR ZERO CUTOFF ---
-    const AutoSaveInput = ({ value, onSave, placeholder, className, maxLength = MAX_NAME_LENGTH }) => {
-      const [val, setVal] = useState(value || '');
-      const timerRef = useRef(null);
-
-      useEffect(() => setVal(value || ''), [value]);
-
-      const debouncedSave = (newValue) => {
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => {
-          if (newValue !== value) onSave(newValue);
-        }, 300);
-      };
-
-      const handleChange = (e) => {
-        let text = e.target.value;
-        if (maxLength && text.length > maxLength) text = text.slice(0, maxLength);
-        setVal(text);
-        debouncedSave(text);
-      };
-
-      const handlePaste = (e) => {
-        e.preventDefault();
-        const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
-        let text = plainText;
-        if (maxLength && text.length > maxLength) text = text.slice(0, maxLength);
-        setVal(text);
-        debouncedSave(text);
-      };
-
-      return (
-        <input
-          type="text"
-          value={val}
-          maxLength={maxLength}
-          placeholder={placeholder}
-          onChange={handleChange}
-          onPaste={handlePaste}
-          onBlur={() => {
-            if (timerRef.current) clearTimeout(timerRef.current);
-            if (val !== value) onSave(val);
-          }}
-          className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 transition-colors break-words whitespace-normal ${className}`}
-        />
-      );
-    };
-
-    // Guaranteed two-pass reflow auto-resizing textarea
+    // --- REFINED AUTO-EXPANDING TEXTAREA (USED FOR ALL TEXT FIELDS TO PREVENT TRUNCATION) ---
     const AutoResizeTextarea = ({ value, onSave, onKeyDown, id, placeholder, className, maxLength = MAX_NOTE_LENGTH, onFocus }) => {
       const [val, setVal] = useState(value || '');
       const textareaRef = useRef(null);
@@ -291,7 +251,6 @@
           }
         };
         updateHeight();
-        // Second-pass reflow to guarantee full visibility after DOM layout completes
         const raf = requestAnimationFrame(updateHeight);
         return () => cancelAnimationFrame(raf);
       }, [val]);
@@ -336,32 +295,32 @@
               if (timerRef.current) clearTimeout(timerRef.current);
               if (val !== value) onSave(val);
             }}
-            className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 leading-relaxed border-none resize-none overflow-hidden break-words whitespace-pre-wrap ${className}`}
+            className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 leading-snug border-none resize-none overflow-hidden break-words whitespace-pre-wrap ${className}`}
           />
         </div>
       );
     };
 
     // --- ICON-ONLY PRIORITY CELL (ZERO BACKGROUND BOX / ZERO TEXT) ---
-    const PriorityIconCell = ({ priority, onChange }) => {
+    const PriorityCell = ({ priority, onChange }) => {
       const cyclePriority = () => {
-        const nextPriority = (priority + 1) % 3;
-        onChange(nextPriority);
+        const next = (priority + 1) % 3;
+        onChange(next);
       };
 
-      const renderIcon = () => {
-        if (priority === 2) return <span className="text-base font-bold text-rose-600 dark:text-rose-400">‼️</span>;
-        if (priority === 1) return <span className="text-base font-bold text-amber-500 dark:text-amber-400">❗</span>;
-        return <span className="text-xs text-slate-300 dark:text-slate-700 font-medium">—</span>;
+      const renderSymbol = () => {
+        if (priority === 2) return <span className="text-rose-600 dark:text-rose-400 font-black font-mono tracking-widest text-sm">! !</span>;
+        if (priority === 1) return <span className="text-amber-500 dark:text-amber-400 font-black font-mono text-sm">!</span>;
+        return <span className="text-slate-300 dark:text-slate-700 opacity-40 font-mono text-xs">—</span>;
       };
 
       return (
         <button 
           onClick={cyclePriority}
-          title="Click to cycle priority: None (—) -> Medium (❗) -> High (‼️)"
-          className="text-center w-full focus:outline-none bg-transparent border-none p-1 cursor-pointer hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded transition"
+          title="Click to cycle priority: None -> Medium (!) -> High (! !)"
+          className="text-center w-full focus:outline-none bg-transparent border-none p-0.5 cursor-pointer hover:bg-slate-200/40 dark:hover:bg-slate-800/40 rounded transition"
         >
-          {renderIcon()}
+          {renderSymbol()}
         </button>
       );
     };
@@ -580,7 +539,7 @@
         setExpandedProjectId(prev => prev === projectId ? null : projectId);
       };
 
-      // --- SUB-STEP & NOTE CHECKLIST RENDERER (TIGHT VERTICAL SPACING) ---
+      // --- SUB-STEP & NOTE CHECKLIST RENDERER (COMPACT LINE HEIGHT ~1.15) ---
       const renderSubList = (project, field) => {
         const rawItems = normalizeSteps(project[field]);
         const items = hideCompletedDone ? rawItems.filter(s => !s.completed) : rawItems;
@@ -675,7 +634,7 @@
                     className="mt-0.5 h-4 w-4 rounded border-slate-400 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" 
                   />
                   
-                  {/* REGULAR FONT WEIGHT (NO BOLD) WITH COMPACT VERTICAL PADDING */}
+                  {/* REGULAR FONT WEIGHT WITH COMPACT LINE HEIGHT (~1.15) */}
                   <AutoResizeTextarea
                     id={`step-input-${project.id}-${field}-${idx}`}
                     value={step.text}
@@ -684,7 +643,7 @@
                     onSave={(val) => updateStepText(idx, val)}
                     onKeyDown={(e, currentVal) => handleKeyDown(e, idx, currentVal)}
                     onFocus={() => setActiveStepId(step.id)}
-                    className={`text-sm font-normal py-0.5 ${step.completed ? 'line-through text-slate-400 dark:text-slate-500 opacity-60' : 'text-slate-800 dark:text-slate-200'}`}
+                    className={`text-sm font-normal py-0.5 leading-snug ${step.completed ? 'line-through text-slate-400 dark:text-slate-500 opacity-60' : 'text-slate-800 dark:text-slate-200'}`}
                   />
                 </div>
 
@@ -848,12 +807,12 @@
                   <table className="w-full text-left border-collapse text-xs">
                     <thead className="bg-amber-400 text-slate-950 font-black uppercase tracking-wider">
                       <tr>
-                        <th className="p-3 w-[20%]">PROJECT NAME</th>
+                        <th className="p-3 w-[22%]">PROJECT NAME</th>
                         <th className="p-3 w-[18%]">STATUS BRIEF</th>
-                        <th className="p-3 w-[27%]">NEXT STEPS</th>
-                        <th className="p-3 w-[5%] text-center">PRIORITY</th>
+                        <th className="p-3 w-[28%]">NEXT STEPS</th>
+                        <th className="p-3 w-[4%] text-center">PRIORITY</th>
                         <th className="p-3 w-[8%]">CATEGORY</th>
-                        <th className="p-3 w-[22%]">NOTES</th>
+                        <th className="p-3 w-[20%]">NOTES</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800 bg-[#0b101d] text-slate-300">
@@ -863,7 +822,7 @@
                         <td className="p-3 text-slate-200">
                           <div>• Pick up clear storage bins from hardware store</div>
                         </td>
-                        <td className="p-3 text-center text-base font-bold">‼️</td>
+                        <td className="p-3 text-center text-rose-400 font-mono font-black text-sm">! !</td>
                         <td className="p-3"><span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold">Personal</span></td>
                         <td className="p-3 text-slate-400">Max bin height is 18 inches. Depot Tues/Sat only.</td>
                       </tr>
@@ -873,7 +832,7 @@
                         <td className="p-3 text-slate-200">
                           <div>• Download property tax summaries</div>
                         </td>
-                        <td className="p-3 text-center text-base font-bold">❗</td>
+                        <td className="p-3 text-center text-amber-400 font-mono font-black text-sm">!</td>
                         <td className="p-3"><span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-semibold">Financial</span></td>
                         <td className="p-3 text-slate-400">Portal file limit 25 MB. Deadline April 30.</td>
                       </tr>
@@ -888,7 +847,7 @@
       }
 
       // =========================================================================
-      // MAIN DASHBOARD WORKSPACE (BALANCED 6-COLUMN RE-ORDERED TABLE)
+      // MAIN DASHBOARD WORKSPACE (ZERO CUTOFF & REBALANCED COLUMNS)
       // =========================================================================
       return (
         <div className="max-w-[1440px] mx-auto p-4 sm:p-6 space-y-4">
@@ -953,8 +912,8 @@
                   className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer"
                 >
                   <option value="all">All Priorities</option>
-                  <option value="2">‼️ High Priority</option>
-                  <option value="1">❗ Medium Priority</option>
+                  <option value="2">! ! High Priority</option>
+                  <option value="1">! Medium Priority</option>
                   <option value="0">Normal</option>
                 </select>
               </div>
@@ -1021,12 +980,12 @@
                 {/* VIBRANT WARM AMBER HEADER */}
                 <div className="hidden md:table-header-group">
                   <div className="md:table-row bg-amber-400 text-slate-950 dark:bg-amber-500 dark:text-slate-950 text-xs font-black uppercase tracking-wider">
-                    <div className="md:table-cell p-3.5 w-[20%]">Project Name</div>
+                    <div className="md:table-cell p-3.5 w-[22%]">Project Name</div>
                     <div className="md:table-cell p-3.5 w-[18%]">Status Brief</div>
-                    <div className="md:table-cell p-3.5 w-[27%]">Next Steps</div>
-                    <div className="md:table-cell p-3.5 w-[5%] text-center">Priority</div>
+                    <div className="md:table-cell p-3.5 w-[28%]">Next Steps</div>
+                    <div className="md:table-cell p-3.5 w-[4%] text-center">Priority</div>
                     <div className="md:table-cell p-3.5 w-[8%]">Category</div>
-                    <div className="md:table-cell p-3.5 w-[22%]">Notes</div>
+                    <div className="md:table-cell p-3.5 w-[20%]">Notes</div>
                   </div>
                 </div>
 
@@ -1049,7 +1008,7 @@
                           className={`block md:table-row bg-white dark:bg-slate-900 ${colorScheme.tint} border border-slate-200 dark:border-slate-800 mb-3 md:mb-0 rounded-xl md:rounded-none overflow-hidden transition-colors duration-150 md:border-x-0 md:border-t-0 md:border-b hover:bg-slate-100/80 md:dark:hover:bg-slate-800/80 ${isArchivedRow ? 'opacity-60' : ''}`}
                         >
                           
-                          {/* 1. PROJECT NAME (GUARANTEED NO CUTOFF / WRAPS NATURALLY) */}
+                          {/* 1. PROJECT NAME (AUTO-EXPANDING TEXTAREA - NO TRUNCATION / NO CUTOFF) */}
                           <div 
                             onClick={(e) => handleRowClick(e, p.id)}
                             className={`block md:table-cell p-3.5 align-top cursor-pointer md:cursor-default border-l-4 ${colorScheme.border} md:border-r ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}
@@ -1065,12 +1024,12 @@
                               )}
 
                               <div className="flex-1 min-w-0 break-words">
-                                <AutoSaveInput 
+                                <AutoResizeTextarea 
                                   value={p.name} 
                                   maxLength={MAX_NAME_LENGTH}
                                   placeholder="Project Name..." 
                                   onSave={(v) => updateProjectField(p.id, 'name', v)} 
-                                  className={`font-semibold text-base leading-snug ${isDarkMode ? 'text-white' : 'text-slate-900'} cursor-text break-words whitespace-normal`} 
+                                  className={`font-semibold text-base leading-snug ${isDarkMode ? 'text-white' : 'text-slate-900'} cursor-text break-words whitespace-pre-wrap`} 
                                 />
                                 
                                 {/* Quiet action links in neutral gray */}
@@ -1121,22 +1080,22 @@
                               />
                             </div>
 
-                            {/* 3. ACTION ZONE: NEXT STEPS (27% COLUMN WIDTH) */}
+                            {/* 3. ACTION ZONE: NEXT STEPS (28% COLUMN WIDTH, COMPACT LINE-HEIGHT ~1.15) */}
                             <div className={`block md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Next Steps</label>
                               {renderSubList(p, 'nextSteps')}
                             </div>
 
-                            {/* 4. DEDICATED PRIORITY COLUMN (MINIMAL ICON-ONLY DISPLAY, NO BACKGROUND BOX) */}
+                            {/* 4. DEDICATED PRIORITY COLUMN (MINIMAL ICON-ONLY: ! ! or ! or blank, COMPACT 4% WIDTH) */}
                             <div className={`block md:table-cell p-3.5 align-top text-center border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Priority</label>
-                              <PriorityIconCell 
+                              <PriorityCell 
                                 priority={p.priority} 
                                 onChange={(newPriority) => updateProjectField(p.id, 'priority', newPriority)} 
                               />
                             </div>
 
-                            {/* 5. DEDICATED CATEGORY COLUMN (SECOND LAST COLUMN RIGHT BEFORE NOTES) */}
+                            {/* 5. DEDICATED CATEGORY COLUMN (MOVED TO SECOND LAST COLUMN RIGHT BEFORE NOTES, COMPACT 8% WIDTH) */}
                             <div className={`block md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Category</label>
                               <select 
@@ -1148,7 +1107,7 @@
                               </select>
                             </div>
 
-                            {/* 6. NOTES: 22% COLUMN WIDTH (AUTO-EXPANDING) */}
+                            {/* 6. NOTES: SPACIOUS 20% COLUMN WIDTH (AUTO-EXPANDING) */}
                             <div className="block md:table-cell p-3.5 align-top border-t md:border-t-0 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
                               <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Notes</label>
                               {renderSubList(p, 'notes')}
