@@ -1,4 +1,4 @@
-<!-- Version 2.6.0 - Database Compatibility & Zero Cutoff Release -->
+<!-- Version 2.7.0 - RCA Zero Cutoff & Icon-Only Priority Release -->
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -41,7 +41,7 @@
     textarea { 
       resize: none !important; 
       overflow: hidden !important; 
-      min-height: 1.8rem;
+      min-height: 1.5rem;
     }
 
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -106,7 +106,7 @@
 
     const CATEGORIES = ['Work', 'Personal', 'Financial', 'Learning', 'Family', 'Spiritual', 'None'];
 
-    // Deep Orange for Work; soft translucent row tinting for ADHD tracking
+    // Deep Orange for Work; soft translucent row tinting restored for ADHD tracking
     const CATEGORY_COLORS = {
       Work: { 
         border: 'border-l-orange-500', 
@@ -144,13 +144,6 @@
         tint: 'bg-slate-50/10 dark:bg-slate-900/10' 
       }
     };
-
-    // Clean Priority notation: ICON ONLY, NO BACKGROUND COLOR BOX
-    const PRIORITIES = [
-      { level: 0, symbol: '', label: 'None' },
-      { level: 1, symbol: '❗', label: '❗ Medium' },
-      { level: 2, symbol: '‼️', label: '‼️ High' }
-    ];
 
     // GROUNDED REAL-WORLD DEMO EXAMPLES
     const DEMO_PROJECTS = [
@@ -234,7 +227,7 @@
       });
     };
 
-    // --- REFINED INPUT COMPONENTS WITH NO TEXT CUTOFF ---
+    // --- REFINED INPUT COMPONENTS WITH TWO-PASS REFOW FOR ZERO CUTOFF ---
     const AutoSaveInput = ({ value, onSave, placeholder, className, maxLength = MAX_NAME_LENGTH }) => {
       const [val, setVal] = useState(value || '');
       const timerRef = useRef(null);
@@ -276,12 +269,12 @@
             if (timerRef.current) clearTimeout(timerRef.current);
             if (val !== value) onSave(val);
           }}
-          className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-1 transition-colors break-words whitespace-normal ${className}`}
+          className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 transition-colors break-words whitespace-normal ${className}`}
         />
       );
     };
 
-    // Guaranteed zero-cutoff auto-resizing textarea
+    // Guaranteed two-pass reflow auto-resizing textarea
     const AutoResizeTextarea = ({ value, onSave, onKeyDown, id, placeholder, className, maxLength = MAX_NOTE_LENGTH, onFocus }) => {
       const [val, setVal] = useState(value || '');
       const textareaRef = useRef(null);
@@ -290,11 +283,17 @@
       useEffect(() => setVal(value || ''), [value]);
 
       useLayoutEffect(() => {
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-          const newHeight = Math.max(28, textareaRef.current.scrollHeight);
-          textareaRef.current.style.height = `${newHeight}px`;
-        }
+        const updateHeight = () => {
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            const newHeight = Math.max(22, textareaRef.current.scrollHeight);
+            textareaRef.current.style.height = `${newHeight}px`;
+          }
+        };
+        updateHeight();
+        // Second-pass reflow to guarantee full visibility after DOM layout completes
+        const raf = requestAnimationFrame(updateHeight);
+        return () => cancelAnimationFrame(raf);
       }, [val]);
 
       const debouncedSave = (newValue) => {
@@ -337,9 +336,33 @@
               if (timerRef.current) clearTimeout(timerRef.current);
               if (val !== value) onSave(val);
             }}
-            className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-1 leading-relaxed border-none resize-none overflow-hidden break-words whitespace-pre-wrap ${className}`}
+            className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 leading-relaxed border-none resize-none overflow-hidden break-words whitespace-pre-wrap ${className}`}
           />
         </div>
+      );
+    };
+
+    // --- ICON-ONLY PRIORITY CELL (ZERO BACKGROUND BOX / ZERO TEXT) ---
+    const PriorityIconCell = ({ priority, onChange }) => {
+      const cyclePriority = () => {
+        const nextPriority = (priority + 1) % 3;
+        onChange(nextPriority);
+      };
+
+      const renderIcon = () => {
+        if (priority === 2) return <span className="text-base font-bold text-rose-600 dark:text-rose-400">‼️</span>;
+        if (priority === 1) return <span className="text-base font-bold text-amber-500 dark:text-amber-400">❗</span>;
+        return <span className="text-xs text-slate-300 dark:text-slate-700 font-medium">—</span>;
+      };
+
+      return (
+        <button 
+          onClick={cyclePriority}
+          title="Click to cycle priority: None (—) -> Medium (❗) -> High (‼️)"
+          className="text-center w-full focus:outline-none bg-transparent border-none p-1 cursor-pointer hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded transition"
+        >
+          {renderIcon()}
+        </button>
       );
     };
 
@@ -406,7 +429,6 @@
           let loaded = snapshot.docs.map(doc => {
             const data = doc.data();
             
-            // Comprehensive schema field normalizer for legacy accounts
             const name = data.name || data.projectName || '';
             const briefStatus = data.briefStatus || data.statusBrief || (typeof data.status === 'string' && data.status.length > 15 ? data.status : '');
             const category = data.category || 'None';
@@ -558,7 +580,7 @@
         setExpandedProjectId(prev => prev === projectId ? null : projectId);
       };
 
-      // --- SUB-STEP & NOTE CHECKLIST RENDERER (REGULAR FONT WEIGHT, NO BOLD FOR NEXT STEPS) ---
+      // --- SUB-STEP & NOTE CHECKLIST RENDERER (TIGHT VERTICAL SPACING) ---
       const renderSubList = (project, field) => {
         const rawItems = normalizeSteps(project[field]);
         const items = hideCompletedDone ? rawItems.filter(s => !s.completed) : rawItems;
@@ -637,11 +659,11 @@
         const completedCountInField = rawItems.filter(s => s.completed).length;
 
         return (
-          <div className="space-y-1.5">
+          <div className="space-y-0.5">
             {items.map((step, idx) => (
               <div key={step.id || idx} className={`group/step flex flex-col transition-all ${indentStyles[step.indent || 0]}`}>
-                <div className="flex items-start gap-2">
-                  <div className="hidden md:flex flex-col text-[10px] text-slate-400 opacity-20 group-hover/step:opacity-100 transition pt-1">
+                <div className="flex items-start gap-1.5">
+                  <div className="hidden md:flex flex-col text-[10px] text-slate-400 opacity-20 group-hover/step:opacity-100 transition pt-0.5">
                     <button onClick={() => moveStep(idx, 'up')} disabled={idx === 0} className="hover:text-amber-600 leading-none disabled:opacity-10">▲</button>
                     <button onClick={() => moveStep(idx, 'down')} disabled={idx === rawItems.length - 1} className="hover:text-amber-600 leading-none disabled:opacity-10">▼</button>
                   </div>
@@ -650,10 +672,10 @@
                     type="checkbox" 
                     checked={!!step.completed} 
                     onChange={() => toggleStepComplete(idx)} 
-                    className="mt-1 h-4 w-4 rounded border-slate-400 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" 
+                    className="mt-0.5 h-4 w-4 rounded border-slate-400 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" 
                   />
                   
-                  {/* REGULAR FONT WEIGHT FOR NEXT STEPS AND NOTES (NO HEAVY BOLD) */}
+                  {/* REGULAR FONT WEIGHT (NO BOLD) WITH COMPACT VERTICAL PADDING */}
                   <AutoResizeTextarea
                     id={`step-input-${project.id}-${field}-${idx}`}
                     value={step.text}
@@ -681,7 +703,7 @@
             ))}
             
             {/* PURGE DONE NEXT TO + ADD ITEM */}
-            <div className="flex items-center gap-3 pt-1">
+            <div className="flex items-center gap-2.5 pt-0.5">
               <button onClick={addEmptyStep} className="text-xs text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 font-medium inline-flex items-center gap-1">
                 + Add Item
               </button>
@@ -828,30 +850,30 @@
                       <tr>
                         <th className="p-3 w-[20%]">PROJECT NAME</th>
                         <th className="p-3 w-[18%]">STATUS BRIEF</th>
-                        <th className="p-3 w-[28%]">NEXT STEPS</th>
-                        <th className="p-3 w-[6%] text-center">PRIORITY</th>
-                        <th className="p-3 w-[10%]">CATEGORY</th>
-                        <th className="p-3 w-[18%]">NOTES</th>
+                        <th className="p-3 w-[27%]">NEXT STEPS</th>
+                        <th className="p-3 w-[5%] text-center">PRIORITY</th>
+                        <th className="p-3 w-[8%]">CATEGORY</th>
+                        <th className="p-3 w-[22%]">NOTES</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800 bg-[#0b101d] text-slate-300">
                       <tr>
                         <td className="p-3 font-semibold text-white border-l-4 border-emerald-500 leading-snug">Garage Cleanout & Storage Setup</td>
                         <td className="p-3 text-slate-300 bg-[#131b2e]/60 border-x border-slate-800">Cleared out left side and put up shelving.</td>
-                        <td className="p-3 text-white">
-                          <div className="text-emerald-400">• Pick up clear storage bins from hardware store</div>
+                        <td className="p-3 text-slate-200">
+                          <div>• Pick up clear storage bins from hardware store</div>
                         </td>
-                        <td className="p-3 text-center text-sm font-bold">‼️</td>
+                        <td className="p-3 text-center text-base font-bold">‼️</td>
                         <td className="p-3"><span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold">Personal</span></td>
                         <td className="p-3 text-slate-400">Max bin height is 18 inches. Depot Tues/Sat only.</td>
                       </tr>
                       <tr>
                         <td className="p-3 font-semibold text-white border-l-4 border-amber-500 leading-snug">Annual Tax & Document Prep</td>
                         <td className="p-3 text-slate-300 bg-[#131b2e]/60 border-x border-slate-800">Gathered income slips and receipts.</td>
-                        <td className="p-3 text-white">
-                          <div className="text-amber-400">• Download property tax summaries</div>
+                        <td className="p-3 text-slate-200">
+                          <div>• Download property tax summaries</div>
                         </td>
-                        <td className="p-3 text-center text-sm font-bold">❗</td>
+                        <td className="p-3 text-center text-base font-bold">❗</td>
                         <td className="p-3"><span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-semibold">Financial</span></td>
                         <td className="p-3 text-slate-400">Portal file limit 25 MB. Deadline April 30.</td>
                       </tr>
@@ -866,7 +888,7 @@
       }
 
       // =========================================================================
-      // MAIN DASHBOARD WORKSPACE
+      // MAIN DASHBOARD WORKSPACE (BALANCED 6-COLUMN RE-ORDERED TABLE)
       // =========================================================================
       return (
         <div className="max-w-[1440px] mx-auto p-4 sm:p-6 space-y-4">
@@ -1001,10 +1023,10 @@
                   <div className="md:table-row bg-amber-400 text-slate-950 dark:bg-amber-500 dark:text-slate-950 text-xs font-black uppercase tracking-wider">
                     <div className="md:table-cell p-3.5 w-[20%]">Project Name</div>
                     <div className="md:table-cell p-3.5 w-[18%]">Status Brief</div>
-                    <div className="md:table-cell p-3.5 w-[28%]">Next Steps</div>
-                    <div className="md:table-cell p-3.5 w-[6%] text-center">Priority</div>
-                    <div className="md:table-cell p-3.5 w-[10%]">Category</div>
-                    <div className="md:table-cell p-3.5 w-[18%]">Notes</div>
+                    <div className="md:table-cell p-3.5 w-[27%]">Next Steps</div>
+                    <div className="md:table-cell p-3.5 w-[5%] text-center">Priority</div>
+                    <div className="md:table-cell p-3.5 w-[8%]">Category</div>
+                    <div className="md:table-cell p-3.5 w-[22%]">Notes</div>
                   </div>
                 </div>
 
@@ -1018,7 +1040,6 @@
                   ) : (
                     displayedProjects.map((p, index) => {
                       const colorScheme = CATEGORY_COLORS[p.category] || CATEGORY_COLORS['None'];
-                      const priorityMeta = PRIORITIES.find(pr => pr.level === p.priority) || PRIORITIES[0];
                       const isExpanded = expandedProjectId === p.id;
                       const isArchivedRow = p.archived || p.status === 'completed';
 
@@ -1028,7 +1049,7 @@
                           className={`block md:table-row bg-white dark:bg-slate-900 ${colorScheme.tint} border border-slate-200 dark:border-slate-800 mb-3 md:mb-0 rounded-xl md:rounded-none overflow-hidden transition-colors duration-150 md:border-x-0 md:border-t-0 md:border-b hover:bg-slate-100/80 md:dark:hover:bg-slate-800/80 ${isArchivedRow ? 'opacity-60' : ''}`}
                         >
                           
-                          {/* 1. PROJECT NAME (GUARANTEED ZERO CUTOFF / WRAPS NATURALLY) */}
+                          {/* 1. PROJECT NAME (GUARANTEED NO CUTOFF / WRAPS NATURALLY) */}
                           <div 
                             onClick={(e) => handleRowClick(e, p.id)}
                             className={`block md:table-cell p-3.5 align-top cursor-pointer md:cursor-default border-l-4 ${colorScheme.border} md:border-r ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}
@@ -1100,7 +1121,7 @@
                               />
                             </div>
 
-                            {/* 3. ACTION ZONE: NEXT STEPS (28% COLUMN WIDTH, REGULAR FONT WEIGHT) */}
+                            {/* 3. ACTION ZONE: NEXT STEPS (27% COLUMN WIDTH) */}
                             <div className={`block md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Next Steps</label>
                               {renderSubList(p, 'nextSteps')}
@@ -1109,20 +1130,13 @@
                             {/* 4. DEDICATED PRIORITY COLUMN (MINIMAL ICON-ONLY DISPLAY, NO BACKGROUND BOX) */}
                             <div className={`block md:table-cell p-3.5 align-top text-center border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Priority</label>
-                              <select 
-                                value={p.priority} 
-                                onChange={(e) => updateProjectField(p.id, 'priority', parseInt(e.target.value, 10))} 
-                                className="bg-transparent border-none text-base cursor-pointer focus:ring-0 shadow-none text-center p-0 font-bold"
-                              >
-                                {PRIORITIES.map(opt => (
-                                  <option key={opt.level} value={opt.level} className="bg-white text-slate-800 font-normal">
-                                    {opt.symbol ? `${opt.symbol} ${opt.label}` : 'None'}
-                                  </option>
-                                ))}
-                              </select>
+                              <PriorityIconCell 
+                                priority={p.priority} 
+                                onChange={(newPriority) => updateProjectField(p.id, 'priority', newPriority)} 
+                              />
                             </div>
 
-                            {/* 5. DEDICATED CATEGORY COLUMN (MOVED TO SECOND LAST COLUMN RIGHT BEFORE NOTES) */}
+                            {/* 5. DEDICATED CATEGORY COLUMN (SECOND LAST COLUMN RIGHT BEFORE NOTES) */}
                             <div className={`block md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
                               <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Category</label>
                               <select 
@@ -1134,7 +1148,7 @@
                               </select>
                             </div>
 
-                            {/* 6. NOTES: 18% COLUMN WIDTH (AUTO-EXPANDING) */}
+                            {/* 6. NOTES: 22% COLUMN WIDTH (AUTO-EXPANDING) */}
                             <div className="block md:table-cell p-3.5 align-top border-t md:border-t-0 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
                               <label className="md:hidden text-[10px] uppercase font-semibold text-slate-400 block mb-1">Notes</label>
                               {renderSubList(p, 'notes')}
