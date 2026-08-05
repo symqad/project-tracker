@@ -1,4 +1,4 @@
-<!-- Version 3.3.0 - Mobile Perfect & ADHD Architecture Release -->
+<!-- Version 3.4.0 - Mobile Responsive Preview & Merged Col Release -->
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -37,7 +37,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <style>
-    /* Remove native browser textarea resize grips completely */
+    /* Strictly remove native browser textarea resize grips in all browsers */
     textarea { 
       resize: none !important; 
       overflow: hidden !important; 
@@ -344,7 +344,7 @@
       );
     };
 
-    // --- INTUITIVE PRIORITY BUTTON CELL (NO TEXT, JUST ICON) ---
+    // --- INTUITIVE PRIORITY BUTTON CELL (STRICT NO-WRAP, 1 SPACE FOR HIGH) ---
     const PriorityCell = ({ priority, onChange }) => {
       const cyclePriority = () => {
         onChange((priority + 1) % 3);
@@ -414,6 +414,7 @@
         return () => unsubscribe();
       }, [isDemoMode]);
 
+      // DATABASE RECOVERY EFFECT
       useEffect(() => {
         if (isDemoMode) {
           setLoading(false);
@@ -674,6 +675,7 @@
                     className="mt-0.5 h-4 w-4 rounded border-slate-400 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" 
                   />
                   
+                  {/* REGULAR FONT WEIGHT WITH COMPACT LINE HEIGHT (~1.15) */}
                   <AutoResizeTextarea
                     id={`step-input-${project.id}-${field}-${idx}`}
                     value={step.text}
@@ -750,7 +752,7 @@
       const isManualOrderingActive = sortBy === 'manual' && priorityFilter === 'all';
 
       // =========================================================================
-      // LANDING & LOGIN PAGE
+      // LANDING & LOGIN PAGE (MOBILE RESPONSIVE PREVIEW & 5 COLUMNS)
       // =========================================================================
       if (!user && !isDemoMode) {
         return (
@@ -814,7 +816,7 @@
                 </div>
               </div>
 
-              {/* LIVE BOARD PREVIEW CARD */}
+              {/* LIVE BOARD PREVIEW CARD (MOBILE-ADAPTIVE) */}
               <div className="bg-[#131b2e] border border-slate-800 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
                   <div className="flex items-center gap-2">
@@ -824,49 +826,118 @@
                   </div>
                 </div>
 
-                <div className="overflow-x-auto rounded-xl border border-slate-800">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead className="bg-amber-400 text-slate-950 font-black uppercase tracking-wider">
-                      <tr>
-                        <th className="p-3 w-[18%]">PROJECT NAME</th>
-                        <th className="p-3 w-[18%]">STATUS BRIEF</th>
-                        <th className="p-3 w-[27%]">NEXT STEPS</th>
-                        <th className="p-3 w-[5%] text-center">PRIORITY</th>
-                        <th className="p-3 w-[8%]">CATEGORY</th>
-                        <th className="p-3 w-[24%]">NOTES</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800 bg-[#0b101d] text-slate-300">
-                      <tr>
-                        <td className="p-3 font-semibold text-white border-l-4 border-emerald-500 leading-snug">Garage Cleanout & Storage Setup</td>
-                        <td className="p-3 text-slate-300 bg-[#131b2e]/60 border-x border-slate-800">Cleared out left side and put up shelving.</td>
-                        <td className="p-3 text-slate-200">
-                          <div>• Pick up clear storage bins from hardware store</div>
-                        </td>
-                        <td className="p-3 text-center align-top">
-                          <div className="w-full flex items-center justify-center bg-slate-800/80 border border-slate-700 p-1 rounded">
-                            <span className="text-rose-400 font-mono font-black text-lg tracking-tighter whitespace-nowrap">{"!\u00A0!"}</span>
+                <div className="overflow-x-hidden md:overflow-x-auto rounded-xl border border-slate-800">
+                  <div className="block md:table w-full text-left border-collapse text-xs">
+                    
+                    {/* Desktop Header */}
+                    <div className="hidden md:table-header-group bg-amber-400 text-slate-950 font-black uppercase tracking-wider">
+                      <div className="md:table-row">
+                        <div className="md:table-cell p-3.5 w-[20%]">PROJECT NAME</div>
+                        <div className="md:table-cell p-3.5 w-[18%]">STATUS BRIEF</div>
+                        <div className="md:table-cell p-3.5 w-[28%]">NEXT STEPS</div>
+                        <div className="md:table-cell p-3.5 w-[10%] text-center">CATEGORY</div>
+                        <div className="md:table-cell p-3.5 w-[24%]">NOTES</div>
+                      </div>
+                    </div>
+
+                    <div className="block md:table-row-group divide-y divide-slate-800 bg-[#0b101d] text-slate-300">
+                      
+                      {/* Row 1 */}
+                      <div className="block md:table-row border-b border-slate-800 md:border-b-0 mb-4 md:mb-0">
+                        <div className="block md:table-cell p-3.5 font-semibold text-white border-l-4 border-emerald-500 leading-snug">
+                          <div className="flex justify-between items-start">
+                            <span>Garage Cleanout & Storage Setup</span>
+                            <div className="md:hidden text-slate-500 pt-0.5"><svg className="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></div>
                           </div>
-                        </td>
-                        <td className="p-3 align-top"><span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold w-full block text-center">Personal</span></td>
-                        <td className="p-3 text-slate-400">Max bin height is 18 inches.</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-semibold text-white border-l-4 border-amber-500 leading-snug">Annual Tax & Document Prep</td>
-                        <td className="p-3 text-slate-300 bg-[#131b2e]/60 border-x border-slate-800">Gathered income slips and receipts.</td>
-                        <td className="p-3 text-slate-200">
-                          <div>• Download property tax summaries</div>
-                        </td>
-                        <td className="p-3 text-center align-top">
-                          <div className="w-full flex items-center justify-center bg-slate-800/80 border border-slate-700 p-1 rounded">
-                            <span className="text-amber-400 font-mono font-black text-lg tracking-tighter whitespace-nowrap">!</span>
+                        </div>
+
+                        {/* Mobile Wrapper for Cells */}
+                        <div className="md:contents flex flex-col">
+                          {/* Merged Category/Priority -> Mobile Order 1 */}
+                          <div className="block md:table-cell p-3.5 border-t md:border-t-0 md:border-r border-slate-800 order-1 md:order-none">
+                            <div className="flex flex-row md:flex-col gap-2.5 items-end md:items-stretch">
+                              <div className="flex-1 md:w-full">
+                                <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider">Category</label>
+                                <span className="px-2 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold w-full block text-center">Personal</span>
+                              </div>
+                              <div className="w-[25%] md:w-full">
+                                <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider text-center">Priority</label>
+                                <div className="w-full flex items-center justify-center bg-slate-800/80 border border-slate-700 h-7 rounded">
+                                  <span className="text-rose-400 font-mono font-black text-lg tracking-tighter whitespace-nowrap">{"!\u00A0!"}</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </td>
-                        <td className="p-3 align-top"><span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-semibold w-full block text-center">Financial</span></td>
-                        <td className="p-3 text-slate-400">Portal file limit 25 MB.</td>
-                      </tr>
-                    </tbody>
-                  </table>
+
+                          {/* Status Brief -> Mobile Order 2 */}
+                          <div className="block md:table-cell p-3.5 bg-[#131b2e]/60 border-t md:border-t-0 border-x border-slate-800 order-2 md:order-none">
+                            <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider">Status Brief</label>
+                            Cleared out left side and put up shelving.
+                          </div>
+
+                          {/* Next Steps -> Mobile Order 3 */}
+                          <div className="block md:table-cell p-3.5 border-t md:border-t-0 border-r border-slate-800 order-3 md:order-none text-slate-200">
+                            <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider">Next Steps</label>
+                            <div className="text-emerald-400">• Pick up clear storage bins from hardware store</div>
+                          </div>
+
+                          {/* Notes -> Mobile Order 4 */}
+                          <div className="block md:table-cell p-3.5 border-t md:border-t-0 border-slate-800 text-slate-400 order-4 md:order-none">
+                            <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider">Notes</label>
+                            Max bin height is 18 inches. Depot Tues/Sat only.
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row 2 */}
+                      <div className="block md:table-row border-b border-slate-800 md:border-b-0 mb-4 md:mb-0">
+                        <div className="block md:table-cell p-3.5 font-semibold text-white border-l-4 border-amber-500 leading-snug">
+                          <div className="flex justify-between items-start">
+                            <span>Annual Tax & Document Prep</span>
+                            <div className="md:hidden text-slate-500 pt-0.5"><svg className="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></div>
+                          </div>
+                        </div>
+
+                        {/* Mobile Wrapper for Cells */}
+                        <div className="md:contents flex flex-col">
+                          {/* Merged Category/Priority -> Mobile Order 1 */}
+                          <div className="block md:table-cell p-3.5 border-t md:border-t-0 md:border-r border-slate-800 order-1 md:order-none">
+                            <div className="flex flex-row md:flex-col gap-2.5 items-end md:items-stretch">
+                              <div className="flex-1 md:w-full">
+                                <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider">Category</label>
+                                <span className="px-2 py-1 rounded bg-amber-950 text-amber-300 border border-amber-800 font-semibold w-full block text-center">Financial</span>
+                              </div>
+                              <div className="w-[25%] md:w-full">
+                                <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider text-center">Priority</label>
+                                <div className="w-full flex items-center justify-center bg-slate-800/80 border border-slate-700 h-7 rounded">
+                                  <span className="text-amber-400 font-mono font-black text-lg tracking-tighter whitespace-nowrap">!</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Status Brief -> Mobile Order 2 */}
+                          <div className="block md:table-cell p-3.5 bg-[#131b2e]/60 border-t md:border-t-0 border-x border-slate-800 order-2 md:order-none">
+                            <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider">Status Brief</label>
+                            Gathered income slips and receipts.
+                          </div>
+
+                          {/* Next Steps -> Mobile Order 3 */}
+                          <div className="block md:table-cell p-3.5 border-t md:border-t-0 border-r border-slate-800 order-3 md:order-none text-slate-200">
+                            <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider">Next Steps</label>
+                            <div className="text-amber-400">• Download property tax summaries</div>
+                          </div>
+
+                          {/* Notes -> Mobile Order 4 */}
+                          <div className="block md:table-cell p-3.5 border-t md:border-t-0 border-slate-800 text-slate-400 order-4 md:order-none">
+                            <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider">Notes</label>
+                            Portal file limit 25 MB.
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -876,7 +947,7 @@
       }
 
       // =========================================================================
-      // MAIN DASHBOARD WORKSPACE (MOBILE FIXES + COMPACT PRIORITY)
+      // MAIN DASHBOARD WORKSPACE (5-COLUMN MERGED & MOBILE READY)
       // =========================================================================
       return (
         <div className="max-w-[1440px] mx-auto p-4 sm:p-6 space-y-4">
@@ -1016,11 +1087,10 @@
                 {/* VIBRANT WARM AMBER HEADER */}
                 <div className="hidden md:table-header-group">
                   <div className="md:table-row bg-amber-400 text-slate-950 dark:bg-amber-500 dark:text-slate-950 text-xs font-black uppercase tracking-wider">
-                    <div className="md:table-cell p-3.5 w-[18%]">Project Name</div>
+                    <div className="md:table-cell p-3.5 w-[20%]">Project Name</div>
                     <div className="md:table-cell p-3.5 w-[18%]">Status Brief</div>
-                    <div className="md:table-cell p-3.5 w-[27%]">Next Steps</div>
-                    <div className="md:table-cell p-3.5 w-[5%] text-center">Priority</div>
-                    <div className="md:table-cell p-3.5 w-[8%]">Category</div>
+                    <div className="md:table-cell p-3.5 w-[28%]">Next Steps</div>
+                    <div className="md:table-cell p-3.5 w-[10%] text-center">Category</div>
                     <div className="md:table-cell p-3.5 w-[24%]">Notes</div>
                   </div>
                 </div>
@@ -1044,7 +1114,7 @@
                           className={`block md:table-row bg-white dark:bg-slate-900 ${colorScheme.tint} border border-slate-200 dark:border-slate-800 mb-3 md:mb-0 rounded-xl md:rounded-none overflow-hidden transition-colors duration-150 md:border-x-0 md:border-t-0 md:border-b hover:bg-slate-100/80 md:dark:hover:bg-slate-800/80 ${isArchivedRow ? 'opacity-60' : ''}`}
                         >
                           
-                          {/* 1. PROJECT NAME (NO CUTOFF / WRAPS NATURALLY) */}
+                          {/* 1. PROJECT NAME */}
                           <div 
                             onClick={(e) => handleRowClick(e, p.id)}
                             className={`block md:table-cell p-3.5 align-top cursor-pointer md:cursor-default border-l-4 ${colorScheme.border} md:border-r ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}
@@ -1068,7 +1138,7 @@
                                   className={`font-semibold text-base leading-snug ${isDarkMode ? 'text-white' : 'text-slate-900'} cursor-text break-words whitespace-pre-wrap`} 
                                 />
                                 
-                                {/* Quiet action links in neutral gray - MOBILE MARGIN TIGHTENED (mt-0.5 md:mt-2) */}
+                                {/* Quiet action links in neutral gray - TIGHT MOBILE MARGIN */}
                                 <div className="mt-0.5 md:mt-2 flex flex-wrap items-center gap-2 text-[11px] md:text-xs text-slate-400 dark:text-slate-500 font-normal">
                                   {currentView === 'active' && (
                                     <>
@@ -1101,11 +1171,36 @@
                             </div>
                           </div>
 
-                          {/* ACCORDION WRAPPER FOR MOBILE */}
-                          {/* Uses Flex Column on mobile to allow specific reordering of DOM elements */}
+                          {/* ACCORDION WRAPPER FOR MOBILE (Flex Column for Re-ordering) */}
                           <div className={`md:contents flex flex-col ${isExpanded ? '' : 'hidden'}`}>
                             
-                            {/* 2. CONTEXT ANCHOR: STATUS BRIEF */}
+                            {/* 4 & 5. COMBINED PRIORITY & CATEGORY (Mobile Order 1: Spans 80/20 above Status Brief) */}
+                            <div className={`flex flex-row md:contents order-1 md:order-none`}>
+                              
+                              {/* Desktop Cell 5: CATEGORY (Mobile flex 80%) */}
+                              <div className={`w-[75%] md:w-auto md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
+                                <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider">Category</label>
+                                <select 
+                                  value={p.category || 'None'} 
+                                  onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
+                                  className={`text-xs p-1.5 rounded font-semibold border cursor-pointer transition w-full h-8 ${colorScheme.badge}`}
+                                >
+                                  {CATEGORIES.map(c => <option key={c} value={c} className="bg-white text-slate-800 font-normal">{c}</option>)}
+                                </select>
+                              </div>
+
+                              {/* Desktop Cell 4: PRIORITY (Mobile flex 20%) */}
+                              <div className={`flex-1 md:w-auto md:table-cell p-3.5 align-top text-center border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
+                                <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider text-left pl-1">Priority</label>
+                                <PriorityCell 
+                                  priority={p.priority} 
+                                  onChange={(newPriority) => updateProjectField(p.id, 'priority', newPriority)} 
+                                />
+                              </div>
+                              
+                            </div>
+                            
+                            {/* 2. CONTEXT ANCHOR: STATUS BRIEF (Mobile Order 2) */}
                             <div className={`block md:table-cell p-3.5 align-top bg-slate-100/50 dark:bg-slate-800/40 border-t md:border-t-0 md:border-x border-slate-200/80 dark:border-slate-800 order-2 md:order-none`}>
                               <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider">Status Brief</label>
                               <AutoResizeTextarea 
@@ -1117,40 +1212,13 @@
                               />
                             </div>
 
-                            {/* 3. ACTION ZONE: NEXT STEPS */}
+                            {/* 3. ACTION ZONE: NEXT STEPS (Mobile Order 3) */}
                             <div className={`block md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'} order-3 md:order-none`}>
                               <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider">Next Steps</label>
                               {renderSubList(p, 'nextSteps')}
                             </div>
 
-                            {/* 4 & 5. COMBINED PRIORITY & CATEGORY (Mobile Re-order 1) */}
-                            {/* Desktop displays these as separate columns, mobile displays them joined in one flex row above Status Brief */}
-                            <div className={`flex flex-row md:contents order-1 md:order-none`}>
-                              
-                              {/* Desktop Cell 4: PRIORITY (Mobile flex 20%) */}
-                              <div className={`w-[25%] md:w-auto md:table-cell p-3.5 align-top text-center border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
-                                <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider text-left pl-1">Priority</label>
-                                <PriorityCell 
-                                  priority={p.priority} 
-                                  onChange={(newPriority) => updateProjectField(p.id, 'priority', newPriority)} 
-                                />
-                              </div>
-
-                              {/* Desktop Cell 5: CATEGORY (Mobile flex 75%) */}
-                              <div className={`flex-1 md:w-auto md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
-                                <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider">Category</label>
-                                <select 
-                                  value={p.category || 'None'} 
-                                  onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
-                                  className={`text-xs p-1.5 rounded font-semibold border cursor-pointer transition w-full h-8 ${colorScheme.badge}`}
-                                >
-                                  {CATEGORIES.map(c => <option key={c} value={c} className="bg-white text-slate-800 font-normal">{c}</option>)}
-                                </select>
-                              </div>
-                              
-                            </div>
-
-                            {/* 6. NOTES: SPACIOUS 24% COLUMN WIDTH (AUTO-EXPANDING) */}
+                            {/* 6. NOTES: SPACIOUS 24% COLUMN WIDTH (Mobile Order 4) */}
                             <div className="block md:table-cell p-3.5 align-top border-t md:border-t-0 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 order-4 md:order-none">
                               <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider">Notes</label>
                               {renderSubList(p, 'notes')}
