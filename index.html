@@ -1,15 +1,29 @@
-<!-- Version 3.4.0 - Mobile Responsive Preview & Merged Col Release -->
+<!-- Version 4.0.0 - Full PWA & Mobile Install Ready Release -->
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Personal Project Tracker</title>
   
   <!-- Security Headers -->
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="X-Frame-Options" content="DENY" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+  <!-- PWA & Mobile App Meta Tags -->
+  <meta name="theme-color" content="#f59e0b" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Tracker" />
+
+  <!-- Apple iOS Safari PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Tracker" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%23f59e0b'/%3E%3Cpath d='M160 256l64 64 128-128' stroke='white' stroke-width='48' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E" />
+
+  <!-- Embedded PWA Web App Manifest (Data URI) -->
+  <link rel="manifest" href="data:application/manifest+json;utf-8,%7B%22name%22%3A%22Personal%20Project%20Tracker%22%2C%22short_name%22%3A%22Tracker%22%2C%22description%22%3A%22ADHD-Friendly%20Focus%20Workspace%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%23f59e0b%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20512%20512%27%253E%253Crect%20width%3D%27512%27%20height%3D%27512%27%20rx%3D%27128%27%20fill%3D%27%2523f59e0b%27%2F%253E%253Cpath%20d%3D%27M160%20256l64%2064%20128-128%27%20stroke%3D%27white%27%20stroke-width%3D%2748%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%20fill%3D%27none%27%2F%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D" />
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -37,7 +51,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <style>
-    /* Strictly remove native browser textarea resize grips in all browsers */
+    /* Remove native browser textarea resize grips completely */
     textarea { 
       resize: none !important; 
       overflow: hidden !important; 
@@ -63,7 +77,7 @@
     const { useState, useEffect, useRef, useLayoutEffect, Component } = React;
 
     // =========================================================================
-    // FIREBASE CONFIGURATION
+    // 1. FIREBASE CONFIGURATION
     // =========================================================================
     const firebaseConfig = {
       apiKey: "AIzaSyCiQU2ilhdlJkxD7-kWHl6lkO2LKQYnC7E",
@@ -97,7 +111,6 @@
 
     const CATEGORIES = ['Work', 'Personal', 'Financial', 'Learning', 'Family', 'Spiritual', 'None'];
 
-    // Soft translucent row tinting for ADHD visual tracking
     const CATEGORY_COLORS = {
       Work: { 
         border: 'border-l-orange-500', 
@@ -136,7 +149,7 @@
       }
     };
 
-    // GROUNDED REAL-WORLD DEMO EXAMPLES
+    // Grounded real-world demo dataset
     const DEMO_PROJECTS = [
       {
         id: 'demo-1',
@@ -231,53 +244,7 @@
       });
     };
 
-    // --- REFINED AUTO-EXPANDING COMPONENTS ---
-    const AutoSaveInput = ({ value, onSave, placeholder, className, maxLength = MAX_NAME_LENGTH }) => {
-      const [val, setVal] = useState(value || '');
-      const timerRef = useRef(null);
-
-      useEffect(() => setVal(value || ''), [value]);
-
-      const debouncedSave = (newValue) => {
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => {
-          if (newValue !== value) onSave(newValue);
-        }, 300);
-      };
-
-      const handleChange = (e) => {
-        let text = e.target.value;
-        if (maxLength && text.length > maxLength) text = text.slice(0, maxLength);
-        setVal(text);
-        debouncedSave(text);
-      };
-
-      const handlePaste = (e) => {
-        e.preventDefault();
-        const plainText = (e.clipboardData || window.clipboardData).getData('text/plain');
-        let text = plainText;
-        if (maxLength && text.length > maxLength) text = text.slice(0, maxLength);
-        setVal(text);
-        debouncedSave(text);
-      };
-
-      return (
-        <input
-          type="text"
-          value={val}
-          maxLength={maxLength}
-          placeholder={placeholder}
-          onChange={handleChange}
-          onPaste={handlePaste}
-          onBlur={() => {
-            if (timerRef.current) clearTimeout(timerRef.current);
-            if (val !== value) onSave(val);
-          }}
-          className={`bg-transparent w-full focus:outline-none focus:border-b-2 focus:border-amber-500 py-0.5 transition-colors break-words whitespace-normal ${className}`}
-        />
-      );
-    };
-
+    // --- REFINED AUTO-EXPANDING TEXTAREA (NO TEXT CUTOFF) ---
     const AutoResizeTextarea = ({ value, onSave, onKeyDown, id, placeholder, className, maxLength = MAX_NOTE_LENGTH, onFocus }) => {
       const [val, setVal] = useState(value || '');
       const textareaRef = useRef(null);
@@ -285,17 +252,12 @@
 
       useEffect(() => setVal(value || ''), [value]);
 
-      useLayoutEffect(() => {
-        const updateHeight = () => {
-          if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            const newHeight = Math.max(22, textareaRef.current.scrollHeight);
-            textareaRef.current.style.height = `${newHeight}px`;
-          }
-        };
-        updateHeight();
-        const raf = requestAnimationFrame(updateHeight);
-        return () => cancelAnimationFrame(raf);
+      useEffect(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          const newHeight = Math.max(22, textareaRef.current.scrollHeight);
+          textareaRef.current.style.height = `${newHeight}px`;
+        }
       }, [val]);
 
       const debouncedSave = (newValue) => {
@@ -344,7 +306,7 @@
       );
     };
 
-    // --- INTUITIVE PRIORITY BUTTON CELL (STRICT NO-WRAP, 1 SPACE FOR HIGH) ---
+    // --- INTUITIVE PRIORITY BUTTON CELL ---
     const PriorityCell = ({ priority, onChange }) => {
       const cyclePriority = () => {
         onChange((priority + 1) % 3);
@@ -378,15 +340,39 @@
       const [isDemoMode, setIsDemoMode] = useState(false);
       const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-      // MOBILE CONTROLS & HIDE COMPLETED
+      // PWA Install Prompt State
+      const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
+
+      // Mobile Controls & Filter States
       const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
       const [hideCompletedDone, setHideCompletedDone] = useState(false);
       const [priorityFilter, setPriorityFilter] = useState('all');
       const [sortBy, setSortBy] = useState('manual');
 
-      // Mobile UI States
+      // Mobile UI Accordion
       const [expandedProjectId, setExpandedProjectId] = useState(null);
       const [activeStepId, setActiveStepId] = useState(null);
+
+      // Listen for Native PWA Installation Prompts (Android / Desktop Chrome)
+      useEffect(() => {
+        const handleBeforeInstallPrompt = (e) => {
+          e.preventDefault();
+          setDeferredInstallPrompt(e);
+        };
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      }, []);
+
+      const handleInstallApp = async () => {
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          const { outcome } = await deferredInstallPrompt.userChoice;
+          if (outcome === 'accepted') setDeferredInstallPrompt(null);
+        } else {
+          // iOS Safari Instructions Alert
+          alert("To install on iOS:\n1. Tap the Share button (⎋) in Safari.\n2. Scroll down and tap 'Add to Home Screen' (⊞).");
+        }
+      };
 
       useEffect(() => {
         const handleOnline = () => setIsOnline(true);
@@ -414,7 +400,7 @@
         return () => unsubscribe();
       }, [isDemoMode]);
 
-      // DATABASE RECOVERY EFFECT
+      // Database listener with legacy document schema recovery
       useEffect(() => {
         if (isDemoMode) {
           setLoading(false);
@@ -580,7 +566,7 @@
         setExpandedProjectId(prev => prev === projectId ? null : projectId);
       };
 
-      // --- SUB-STEP & NOTE CHECKLIST RENDERER (TIGHT VERTICAL LINE-HEIGHT) ---
+      // --- SUB-STEP & NOTE CHECKLIST RENDERER (COMPACT LINE HEIGHT) ---
       const renderSubList = (project, field) => {
         const rawItems = normalizeSteps(project[field]);
         const items = hideCompletedDone ? rawItems.filter(s => !s.completed) : rawItems;
@@ -856,13 +842,13 @@
                           {/* Merged Category/Priority -> Mobile Order 1 */}
                           <div className="block md:table-cell p-3.5 border-t md:border-t-0 md:border-r border-slate-800 order-1 md:order-none">
                             <div className="flex flex-row md:flex-col gap-2.5 items-end md:items-stretch">
-                              <div className="flex-1 md:w-full">
+                              <div className="w-[75%] md:w-full">
                                 <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider">Category</label>
                                 <span className="px-2 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold w-full block text-center">Personal</span>
                               </div>
                               <div className="w-[25%] md:w-full">
                                 <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider text-center">Priority</label>
-                                <div className="w-full flex items-center justify-center bg-slate-800/80 border border-slate-700 h-7 rounded">
+                                <div className="w-full flex items-center justify-center bg-slate-800/80 border border-slate-700 h-8 rounded">
                                   <span className="text-rose-400 font-mono font-black text-lg tracking-tighter whitespace-nowrap">{"!\u00A0!"}</span>
                                 </div>
                               </div>
@@ -884,7 +870,7 @@
                           {/* Notes -> Mobile Order 4 */}
                           <div className="block md:table-cell p-3.5 border-t md:border-t-0 border-slate-800 text-slate-400 order-4 md:order-none">
                             <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider">Notes</label>
-                            Max bin height is 18 inches. Depot Tues/Sat only.
+                            Max bin height is 18 inches.
                           </div>
                         </div>
                       </div>
@@ -903,13 +889,13 @@
                           {/* Merged Category/Priority -> Mobile Order 1 */}
                           <div className="block md:table-cell p-3.5 border-t md:border-t-0 md:border-r border-slate-800 order-1 md:order-none">
                             <div className="flex flex-row md:flex-col gap-2.5 items-end md:items-stretch">
-                              <div className="flex-1 md:w-full">
+                              <div className="w-[75%] md:w-full">
                                 <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider">Category</label>
                                 <span className="px-2 py-1 rounded bg-amber-950 text-amber-300 border border-amber-800 font-semibold w-full block text-center">Financial</span>
                               </div>
                               <div className="w-[25%] md:w-full">
                                 <label className="md:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-800 pb-0.5 tracking-wider text-center">Priority</label>
-                                <div className="w-full flex items-center justify-center bg-slate-800/80 border border-slate-700 h-7 rounded">
+                                <div className="w-full flex items-center justify-center bg-slate-800/80 border border-slate-700 h-8 rounded">
                                   <span className="text-amber-400 font-mono font-black text-lg tracking-tighter whitespace-nowrap">!</span>
                                 </div>
                               </div>
@@ -1050,6 +1036,11 @@
                  <button onClick={addProject} className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-3.5 py-1.5 rounded-lg text-xs shadow-sm transition">
                    + New Project
                  </button>
+
+                 {/* PWA Install Button */}
+                 <button onClick={handleInstallApp} className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold border border-slate-200 dark:border-slate-700" title="Install App">
+                   📲
+                 </button>
                  
                  {/* Profile Avatar / Desktop Status Tag */}
                  <div className="flex items-center gap-2 ml-2">
@@ -1068,10 +1059,13 @@
                  </div>
               </div>
 
-              {/* Mobile Only: Sign Out Link */}
-              <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:hidden w-full items-center justify-center pt-2 mt-1 border-t border-slate-200 dark:border-slate-700`}>
+              {/* Mobile Only: Sign Out Link & Install Button */}
+              <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:hidden w-full items-center justify-between pt-2 mt-1 border-t border-slate-200 dark:border-slate-700`}>
+                 <button onClick={handleInstallApp} className="text-xs text-amber-600 dark:text-amber-400 font-bold transition flex items-center gap-1">
+                   📲 Install App (PWA)
+                 </button>
                  <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-red-500 font-medium transition flex items-center gap-2">
-                    {isDemoMode ? 'Exit Demo Sandbox' : 'Sign Out of Workspace'}
+                    {isDemoMode ? 'Exit Demo' : 'Sign Out'}
                  </button>
               </div>
             </div>
@@ -1084,7 +1078,7 @@
             ) : (
               <div className="block md:table w-full text-left border-collapse md:min-w-[1100px]">
                 
-                {/* VIBRANT WARM AMBER HEADER */}
+                {/* VIBRANT WARM AMBER HEADER (5 MERGED COLUMNS) */}
                 <div className="hidden md:table-header-group">
                   <div className="md:table-row bg-amber-400 text-slate-950 dark:bg-amber-500 dark:text-slate-950 text-xs font-black uppercase tracking-wider">
                     <div className="md:table-cell p-3.5 w-[20%]">Project Name</div>
@@ -1138,7 +1132,7 @@
                                   className={`font-semibold text-base leading-snug ${isDarkMode ? 'text-white' : 'text-slate-900'} cursor-text break-words whitespace-pre-wrap`} 
                                 />
                                 
-                                {/* Quiet action links in neutral gray - TIGHT MOBILE MARGIN */}
+                                {/* Quiet action links in neutral gray */}
                                 <div className="mt-0.5 md:mt-2 flex flex-wrap items-center gap-2 text-[11px] md:text-xs text-slate-400 dark:text-slate-500 font-normal">
                                   {currentView === 'active' && (
                                     <>
@@ -1171,33 +1165,36 @@
                             </div>
                           </div>
 
-                          {/* ACCORDION WRAPPER FOR MOBILE (Flex Column for Re-ordering) */}
+                          {/* ACCORDION WRAPPER FOR MOBILE */}
                           <div className={`md:contents flex flex-col ${isExpanded ? '' : 'hidden'}`}>
                             
-                            {/* 4 & 5. COMBINED PRIORITY & CATEGORY (Mobile Order 1: Spans 80/20 above Status Brief) */}
-                            <div className={`flex flex-row md:contents order-1 md:order-none`}>
+                            {/* 4 & 5. MERGED PRIORITY & CATEGORY (Mobile: Flex Row 75%/25%, Order 1 | Desktop: Merged Cell Column) */}
+                            <div className={`block md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'} order-1 md:order-none`}>
                               
-                              {/* Desktop Cell 5: CATEGORY (Mobile flex 80%) */}
-                              <div className={`w-[75%] md:w-auto md:table-cell p-3.5 align-top border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
-                                <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider">Category</label>
-                                <select 
-                                  value={p.category || 'None'} 
-                                  onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
-                                  className={`text-xs p-1.5 rounded font-semibold border cursor-pointer transition w-full h-8 ${colorScheme.badge}`}
-                                >
-                                  {CATEGORIES.map(c => <option key={c} value={c} className="bg-white text-slate-800 font-normal">{c}</option>)}
-                                </select>
-                              </div>
+                              <div className="flex flex-row md:flex-col gap-2.5 items-end md:items-stretch">
+                                
+                                {/* Category (Mobile 75%, Desktop 100%) */}
+                                <div className="w-[75%] md:w-full">
+                                  <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider">Category</label>
+                                  <select 
+                                    value={p.category || 'None'} 
+                                    onChange={(e) => updateProjectField(p.id, 'category', e.target.value)} 
+                                    className={`text-xs p-1.5 rounded font-semibold border cursor-pointer transition w-full h-8 ${colorScheme.badge}`}
+                                  >
+                                    {CATEGORIES.map(c => <option key={c} value={c} className="bg-white text-slate-800 font-normal">{c}</option>)}
+                                  </select>
+                                </div>
 
-                              {/* Desktop Cell 4: PRIORITY (Mobile flex 20%) */}
-                              <div className={`flex-1 md:w-auto md:table-cell p-3.5 align-top text-center border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'md:border-r-slate-800' : 'md:border-r-slate-200'}`}>
-                                <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider text-left pl-1">Priority</label>
-                                <PriorityCell 
-                                  priority={p.priority} 
-                                  onChange={(newPriority) => updateProjectField(p.id, 'priority', newPriority)} 
-                                />
+                                {/* Priority (Mobile 25%, Desktop 100%) */}
+                                <div className="w-[25%] md:w-full">
+                                  <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider text-center">Priority</label>
+                                  <PriorityCell 
+                                    priority={p.priority} 
+                                    onChange={(newPriority) => updateProjectField(p.id, 'priority', newPriority)} 
+                                  />
+                                </div>
+
                               </div>
-                              
                             </div>
                             
                             {/* 2. CONTEXT ANCHOR: STATUS BRIEF (Mobile Order 2) */}
@@ -1218,7 +1215,7 @@
                               {renderSubList(p, 'nextSteps')}
                             </div>
 
-                            {/* 6. NOTES: SPACIOUS 24% COLUMN WIDTH (Mobile Order 4) */}
+                            {/* 6. NOTES: 24% COLUMN WIDTH (Mobile Order 4) */}
                             <div className="block md:table-cell p-3.5 align-top border-t md:border-t-0 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 order-4 md:order-none">
                               <label className="md:hidden text-[11px] uppercase font-black text-slate-700 dark:text-slate-300 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider">Notes</label>
                               {renderSubList(p, 'notes')}
