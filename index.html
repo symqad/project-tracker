@@ -1,4 +1,4 @@
-<!-- Version 5.0.1 - Executive Landing Page & Onboarding Release -->
+<!-- Version 5.1.0 - Task Handling and Cleanup Logic -->
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -138,32 +138,16 @@
         archived: false,
         orderIndex: 100,
         nextSteps: [
-          { id: 'd1-1', text: 'Pick up two 50-liter clear storage bins from the hardware store', completed: false, indent: 0 },
-          { id: 'd1-2', text: 'Sort holiday decorations and seasonal gear into labeled bins', completed: false, indent: 0 },
-          { id: 'd1-3', text: 'Drop off old paint cans and electronics at the local recycling depot', completed: false, indent: 0 }
+          { id: 'd1-1', text: 'Pick up two 50-liter clear storage bins from the hardware store', completed: false, indent: 0, archived: false },
+          { id: 'd1-2', text: 'Sort holiday decorations and seasonal gear into labeled bins', completed: true, indent: 0, archived: false },
+          { id: 'd1-3', text: 'Drop off old paint cans and electronics at the local recycling depot', completed: true, indent: 0, archived: false },
+          { id: 'd1-4', text: 'Sweep the floor and organize toolbench', completed: true, indent: 0, archived: false },
+          { id: 'd1-5', text: 'Install motion sensor lights above the garage door', completed: true, indent: 0, archived: false },
+          { id: 'd1-6', text: 'Hang the extension cords on the new wall hooks', completed: true, indent: 0, archived: false }
         ],
         notes: [
           { id: 'dn1-1', text: 'Max bin height for the middle shelves is 18 inches.', completed: false, indent: 0 },
           { id: 'dn1-2', text: 'Hazardous waste depot is open Tues & Sat 8 am–2 pm only.', completed: false, indent: 0 }
-        ]
-      },
-      {
-        id: 'demo-2',
-        name: 'Annual Tax & Document Prep',
-        briefStatus: 'Gathered income slips and categorized digital receipts for the year.',
-        category: 'Financial',
-        priority: 1,
-        status: 'active',
-        archived: false,
-        orderIndex: 200,
-        nextSteps: [
-          { id: 'd2-1', text: 'Download property tax and medical expense summaries from online accounts', completed: false, indent: 0 },
-          { id: 'd2-2', text: 'Log charitable donations and deductible expenses into a summary list', completed: false, indent: 0 },
-          { id: 'd2-3', text: 'Upload organized files to the accountant portal', completed: false, indent: 0 }
-        ],
-        notes: [
-          { id: 'dn2-1', text: 'Portal has a 25 MB file size limit per upload.', completed: false, indent: 0 },
-          { id: 'dn2-2', text: 'Filing deadline is April 30.', completed: false, indent: 0 }
         ]
       }
     ];
@@ -171,18 +155,19 @@
     const normalizeSteps = (items) => {
       if (!Array.isArray(items)) return [];
       return items.map((item, idx) => {
-        if (!item) return { id: `step-${Date.now()}-${idx}`, text: '', completed: false, indent: 0 };
-        if (typeof item === 'string') return { id: `step-${Date.now()}-${idx}`, text: item.slice(0, MAX_NOTE_LENGTH), completed: false, indent: 0 };
+        if (!item) return { id: `step-${Date.now()}-${idx}`, text: '', completed: false, indent: 0, archived: false };
+        if (typeof item === 'string') return { id: `step-${Date.now()}-${idx}`, text: item.slice(0, MAX_NOTE_LENGTH), completed: false, indent: 0, archived: false };
         return {
           id: item.id || `step-${Date.now()}-${idx}`,
           text: (item.text || '').slice(0, MAX_NOTE_LENGTH),
           completed: !!(item.completed || item.done),
-          indent: typeof item.indent === 'number' ? Math.max(0, Math.min(2, item.indent)) : 0
+          indent: typeof item.indent === 'number' ? Math.max(0, Math.min(2, item.indent)) : 0,
+          archived: !!item.archived
         };
       });
     };
 
-    // --- REFINED AUTO-EXPANDING COMPONENTS ---
+    // --- REFINED COMPONENTS ---
     const AutoSaveInput = ({ value, onSave, placeholder, className, maxLength = MAX_NAME_LENGTH }) => {
       const [val, setVal] = useState(value || '');
       const timerRef = useRef(null);
@@ -314,6 +299,153 @@
         >
           {renderSymbol()}
         </button>
+      );
+    };
+
+    // --- SUB-LIST PROGRESSIVE DISCLOSURE COMPONENT ---
+    const SubList = ({ project, field, hideCompletedDone, updateProjectField, activeStepId, setActiveStepId, purgeProjectSubSteps }) => {
+      const [isShowingAllCompleted, setIsShowingAllCompleted] = useState(false);
+      
+      const rawItems = normalizeSteps(project[field]);
+      
+      // We tag each item with its absolute database index before we do any filtering.
+      // This prevents the data-corruption bug when mutating the array.
+      const itemsWithIndex = rawItems.map((step, originalIndex) => ({ step, originalIndex }));
+      
+      const activeItems = itemsWithIndex.filter(({ step }) => !step.completed && !step.archived);
+      const completedItems = itemsWithIndex.filter(({ step }) => step.completed && !step.archived);
+      
+      // Determine how many completed items to display based on the new logic
+      const displayCompleted = hideCompletedDone 
+        ? [] 
+        : (isShowingAllCompleted ? completedItems : completedItems.slice(0, 4));
+        
+      const itemsToRender = [...activeItems, ...displayCompleted];
+
+      const moveStep = (originalIndex, direction) => {
+        const targetIdx = direction === 'up' ? originalIndex - 1 : originalIndex + 1;
+        if (targetIdx < 0 || targetIdx >= rawItems.length) return;
+        const updated = [...rawItems];
+        const temp = updated[originalIndex];
+        updated[originalIndex] = updated[targetIdx];
+        updated[targetIdx] = temp;
+        updateProjectField(project.id, field, updated);
+      };
+
+      const updateIndent = (originalIndex, direction) => {
+        const updated = [...rawItems];
+        const currentIndent = updated[originalIndex].indent || 0;
+        updated[originalIndex].indent = direction === 'left' ? Math.max(0, currentIndent - 1) : Math.min(2, currentIndent + 1);
+        updateProjectField(project.id, field, updated);
+      };
+
+      const handleKeyDown = (e, originalIndex, currentText) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const updated = [...rawItems];
+          updated[originalIndex].text = currentText.slice(0, MAX_NOTE_LENGTH);
+          const newStep = { 
+            id: `step-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`, 
+            text: '', 
+            completed: false, 
+            indent: rawItems[originalIndex] ? rawItems[originalIndex].indent : 0,
+            archived: false
+          };
+          updated.splice(originalIndex + 1, 0, newStep);
+          updateProjectField(project.id, field, updated);
+          
+          setTimeout(() => {
+            const nextInput = document.getElementById(`step-input-${project.id}-${field}-${originalIndex + 1}`);
+            if (nextInput) nextInput.focus();
+          }, 30);
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          updateIndent(originalIndex, e.shiftKey ? 'left' : 'right');
+        } else if (e.key === 'Backspace' && currentText === '' && rawItems.length > 1) {
+          e.preventDefault();
+          const updated = rawItems.filter((_, i) => i !== originalIndex);
+          updateProjectField(project.id, field, updated);
+          setTimeout(() => {
+            const prevInput = document.getElementById(`step-input-${project.id}-${field}-${Math.max(0, originalIndex - 1)}`);
+            if (prevInput) prevInput.focus();
+          }, 30);
+        }
+      };
+
+      const updateStepText = (originalIndex, val) => {
+        const updated = [...rawItems];
+        updated[originalIndex].text = val.slice(0, MAX_NOTE_LENGTH);
+        updateProjectField(project.id, field, updated);
+      };
+
+      const toggleStepComplete = (originalIndex) => {
+        const updated = [...rawItems];
+        updated[originalIndex].completed = !updated[originalIndex].completed;
+        updateProjectField(project.id, field, updated);
+      };
+
+      const addEmptyStep = () => {
+        updateProjectField(project.id, field, [...rawItems, { id: `step-${Date.now()}`, text: '', completed: false, indent: 0, archived: false }]);
+      };
+
+      const indentStyles = ['ml-0', 'ml-4 border-l-2 border-slate-300 dark:border-slate-700 pl-2', 'ml-8 border-l-2 border-amber-400 pl-2'];
+      const completedCountInField = completedItems.length;
+
+      return (
+        <div className="space-y-0.5">
+          {itemsToRender.map(({ step, originalIndex }) => (
+            <div key={step.id || originalIndex} className={`group/step flex flex-col transition-all ${indentStyles[step.indent || 0]}`}>
+              <div className="flex items-start gap-1.5">
+                <div className="hidden lg:flex flex-col text-[10px] text-slate-400 opacity-20 group-hover/step:opacity-100 transition pt-0.5">
+                  <button onClick={() => moveStep(originalIndex, 'up')} disabled={originalIndex === 0} className="hover:text-amber-600 leading-none disabled:opacity-10">▲</button>
+                  <button onClick={() => moveStep(originalIndex, 'down')} disabled={originalIndex === rawItems.length - 1} className="hover:text-amber-600 leading-none disabled:opacity-10">▼</button>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={!!step.completed} 
+                  onChange={() => toggleStepComplete(originalIndex)} 
+                  className="mt-0.5 h-4 w-4 rounded border-slate-400 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" 
+                />
+                <AutoResizeTextarea
+                  id={`step-input-${project.id}-${field}-${originalIndex}`}
+                  value={step.text}
+                  maxLength={MAX_NOTE_LENGTH}
+                  placeholder={field === 'nextSteps' ? "Add action step..." : "Add note..."}
+                  onSave={(val) => updateStepText(originalIndex, val)}
+                  onKeyDown={(e, currentVal) => handleKeyDown(e, originalIndex, currentVal)}
+                  onFocus={() => setActiveStepId(step.id)}
+                  className={`text-sm font-normal py-0.5 leading-snug ${step.completed ? 'line-through text-slate-400 dark:text-slate-500 opacity-60' : 'text-slate-800 dark:text-slate-200'}`}
+                />
+              </div>
+              {activeStepId === step.id && (
+                <div className="lg:hidden flex items-center justify-start gap-2 mt-1 mb-2 ml-6">
+                  <div className="flex bg-slate-200 dark:bg-slate-800 rounded-lg overflow-hidden text-xs">
+                    <button onMouseDown={(e) => { e.preventDefault(); moveStep(originalIndex, 'up'); }} disabled={originalIndex === 0} className="px-2.5 py-1 text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-slate-700">▲ Up</button>
+                    <button onMouseDown={(e) => { e.preventDefault(); moveStep(originalIndex, 'down'); }} disabled={originalIndex === rawItems.length - 1} className="px-2.5 py-1 text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-slate-700">▼ Down</button>
+                    <button onMouseDown={(e) => { e.preventDefault(); updateIndent(originalIndex, 'left'); }} disabled={(step.indent || 0) === 0} className="px-2.5 py-1 text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-slate-700">⇥ Outdent</button>
+                    <button onMouseDown={(e) => { e.preventDefault(); updateIndent(originalIndex, 'right'); }} disabled={(step.indent || 0) === 2} className="px-2.5 py-1 text-slate-700 dark:text-slate-300">Indent ⇤</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          
+          {completedItems.length > 4 && !hideCompletedDone && (
+            <button 
+              onClick={() => setIsShowingAllCompleted(!isShowingAllCompleted)}
+              className="text-xs font-semibold text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors mt-2 text-left pl-6 focus:outline-none"
+            >
+              {isShowingAllCompleted ? "▲ Collapse completed steps" : `▼ + ${completedItems.length - 4} older completed steps...`}
+            </button>
+          )}
+
+          <div className="flex items-center gap-2.5 pt-1.5 pl-6">
+            <button onClick={addEmptyStep} className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 font-semibold inline-flex items-center gap-1">+ Add Item</button>
+            {completedCountInField > 0 && (
+              <><span className="text-slate-300 dark:text-slate-700">•</span><button onClick={() => purgeProjectSubSteps(project.id, field)} className="text-[11px] text-slate-400 hover:text-red-500 transition font-medium">Purge Done ({completedCountInField})</button></>
+            )}
+          </div>
+        </div>
       );
     };
 
@@ -504,7 +636,7 @@
           status: 'active',
           archived: false,
           orderIndex: maxOrder + 100,
-          nextSteps: [{ id: `step-${Date.now()}`, text: '', completed: false, indent: 0 }],
+          nextSteps: [{ id: `step-${Date.now()}`, text: '', completed: false, indent: 0, archived: false }],
           notes: []
         };
 
@@ -564,137 +696,17 @@
         batch.commit();
       };
 
+      // Now applies a soft-delete (archived flag) instead of permanently dropping them from the array
       const purgeProjectSubSteps = (projectId, field) => {
         const proj = projects.find(p => p.id === projectId);
         if (!proj) return;
-        const remaining = (proj[field] || []).filter(s => !s.completed);
-        updateProjectField(projectId, field, remaining);
+        const updated = (proj[field] || []).map(s => s.completed ? { ...s, archived: true } : s);
+        updateProjectField(projectId, field, updated);
       };
 
       const handleRowClick = (e, projectId) => {
         if (['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
         setExpandedProjectId(prev => prev === projectId ? null : projectId);
-      };
-
-      // --- SUB-STEP CHECKLIST RENDERER ---
-      const renderSubList = (project, field) => {
-        const rawItems = normalizeSteps(project[field]);
-        const items = hideCompletedDone ? rawItems.filter(s => !s.completed) : rawItems;
-
-        const moveStep = (index, direction) => {
-          const targetIdx = direction === 'up' ? index - 1 : index + 1;
-          if (targetIdx < 0 || targetIdx >= rawItems.length) return;
-          const updated = [...rawItems];
-          const temp = updated[index];
-          updated[index] = updated[targetIdx];
-          updated[targetIdx] = temp;
-          updateProjectField(project.id, field, updated);
-        };
-
-        const updateIndent = (index, direction) => {
-          const updated = [...rawItems];
-          const currentIndent = updated[index].indent || 0;
-          updated[index].indent = direction === 'left' ? Math.max(0, currentIndent - 1) : Math.min(2, currentIndent + 1);
-          updateProjectField(project.id, field, updated);
-        };
-
-        const handleKeyDown = (e, index, currentText) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            const updated = [...rawItems];
-            updated[index].text = currentText.slice(0, MAX_NOTE_LENGTH);
-            const newStep = { 
-              id: `step-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`, 
-              text: '', 
-              completed: false, 
-              indent: rawItems[index] ? rawItems[index].indent : 0 
-            };
-            updated.splice(index + 1, 0, newStep);
-            updateProjectField(project.id, field, updated);
-            
-            setTimeout(() => {
-              const nextInput = document.getElementById(`step-input-${project.id}-${field}-${index + 1}`);
-              if (nextInput) nextInput.focus();
-            }, 30);
-          } else if (e.key === 'Tab') {
-            e.preventDefault();
-            updateIndent(index, e.shiftKey ? 'left' : 'right');
-          } else if (e.key === 'Backspace' && currentText === '' && rawItems.length > 1) {
-            e.preventDefault();
-            const updated = rawItems.filter((_, i) => i !== index);
-            updateProjectField(project.id, field, updated);
-            setTimeout(() => {
-              const prevInput = document.getElementById(`step-input-${project.id}-${field}-${Math.max(0, index - 1)}`);
-              if (prevInput) prevInput.focus();
-            }, 30);
-          }
-        };
-
-        const updateStepText = (index, val) => {
-          const updated = [...rawItems];
-          updated[index].text = val.slice(0, MAX_NOTE_LENGTH);
-          updateProjectField(project.id, field, updated);
-        };
-
-        const toggleStepComplete = (index) => {
-          const updated = [...rawItems];
-          updated[index].completed = !updated[index].completed;
-          updateProjectField(project.id, field, updated);
-        };
-
-        const addEmptyStep = () => {
-          updateProjectField(project.id, field, [...rawItems, { id: `step-${Date.now()}`, text: '', completed: false, indent: 0 }]);
-        };
-
-        const indentStyles = ['ml-0', 'ml-4 border-l-2 border-slate-300 dark:border-slate-700 pl-2', 'ml-8 border-l-2 border-amber-400 pl-2'];
-        const completedCountInField = rawItems.filter(s => s.completed).length;
-
-        return (
-          <div className="space-y-0.5">
-            {items.map((step, idx) => (
-              <div key={step.id || idx} className={`group/step flex flex-col transition-all ${indentStyles[step.indent || 0]}`}>
-                <div className="flex items-start gap-1.5">
-                  <div className="hidden lg:flex flex-col text-[10px] text-slate-400 opacity-20 group-hover/step:opacity-100 transition pt-0.5">
-                    <button onClick={() => moveStep(idx, 'up')} disabled={idx === 0} className="hover:text-amber-600 leading-none disabled:opacity-10">▲</button>
-                    <button onClick={() => moveStep(idx, 'down')} disabled={idx === rawItems.length - 1} className="hover:text-amber-600 leading-none disabled:opacity-10">▼</button>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={!!step.completed} 
-                    onChange={() => toggleStepComplete(idx)} 
-                    className="mt-0.5 h-4 w-4 rounded border-slate-400 text-amber-500 focus:ring-amber-400 cursor-pointer flex-shrink-0" 
-                  />
-                  <AutoResizeTextarea
-                    id={`step-input-${project.id}-${field}-${idx}`}
-                    value={step.text}
-                    maxLength={MAX_NOTE_LENGTH}
-                    placeholder={field === 'nextSteps' ? "Add action step..." : "Add note..."}
-                    onSave={(val) => updateStepText(idx, val)}
-                    onKeyDown={(e, currentVal) => handleKeyDown(e, idx, currentVal)}
-                    onFocus={() => setActiveStepId(step.id)}
-                    className={`text-sm font-normal py-0.5 leading-snug ${step.completed ? 'line-through text-slate-400 dark:text-slate-500 opacity-60' : 'text-slate-800 dark:text-slate-200'}`}
-                  />
-                </div>
-                {activeStepId === step.id && (
-                  <div className="lg:hidden flex items-center justify-start gap-2 mt-1 mb-2 ml-6">
-                    <div className="flex bg-slate-200 dark:bg-slate-800 rounded-lg overflow-hidden text-xs">
-                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'up'); }} disabled={idx === 0} className="px-2.5 py-1 text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-slate-700">▲ Up</button>
-                      <button onMouseDown={(e) => { e.preventDefault(); moveStep(idx, 'down'); }} disabled={idx === rawItems.length - 1} className="px-2.5 py-1 text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-slate-700">▼ Down</button>
-                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'left'); }} disabled={(step.indent || 0) === 0} className="px-2.5 py-1 text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-slate-700">⇥ Outdent</button>
-                      <button onMouseDown={(e) => { e.preventDefault(); updateIndent(idx, 'right'); }} disabled={(step.indent || 0) === 2} className="px-2.5 py-1 text-slate-700 dark:text-slate-300">Indent ⇤</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-            <div className="flex items-center gap-2.5 pt-0.5">
-              <button onClick={addEmptyStep} className="text-xs text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 font-medium inline-flex items-center gap-1">+ Add Item</button>
-              {completedCountInField > 0 && (
-                <><span className="text-slate-300 dark:text-slate-700">•</span><button onClick={() => purgeProjectSubSteps(project.id, field)} className="text-xs text-slate-400 hover:text-red-500 transition font-normal">Purge Done ({completedCountInField})</button></>
-              )}
-            </div>
-          </div>
-        );
       };
 
       const masterViewProjects = projects.filter(p => {
@@ -1038,13 +1050,29 @@
                             {/* 3. ACTION ZONE: NEXT STEPS */}
                             <div className={`block lg:table-cell p-3.5 align-top border-t lg:border-t-0 lg:border-r border-slate-100 dark:border-slate-800 ${isDarkMode ? 'lg:border-r-slate-800' : 'lg:border-r-slate-200'} order-3 lg:order-none`}>
                               <label className="lg:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider">Next Steps</label>
-                              {renderSubList(p, 'nextSteps')}
+                              <SubList 
+                                project={p} 
+                                field="nextSteps" 
+                                hideCompletedDone={hideCompletedDone} 
+                                updateProjectField={updateProjectField} 
+                                activeStepId={activeStepId} 
+                                setActiveStepId={setActiveStepId}
+                                purgeProjectSubSteps={purgeProjectSubSteps}
+                              />
                             </div>
 
                             {/* 6. NOTES */}
                             <div className="block lg:table-cell p-3.5 align-top border-t lg:border-t-0 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 order-4 lg:order-none">
                               <label className="lg:hidden text-[11px] uppercase font-black text-slate-500 block mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-0.5 tracking-wider">Notes</label>
-                              {renderSubList(p, 'notes')}
+                              <SubList 
+                                project={p} 
+                                field="notes" 
+                                hideCompletedDone={hideCompletedDone} 
+                                updateProjectField={updateProjectField} 
+                                activeStepId={activeStepId} 
+                                setActiveStepId={setActiveStepId}
+                                purgeProjectSubSteps={purgeProjectSubSteps}
+                              />
                             </div>
 
                           </div>
